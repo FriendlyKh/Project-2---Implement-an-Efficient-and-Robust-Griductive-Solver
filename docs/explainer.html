@@ -1,0 +1,1389 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Griductive Solver — An Interactive Explainer</title>
+<style>
+/* ===== RESET & BASE ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg: #0f0f23;
+  --bg2: #1a1a2e;
+  --bg3: #16213e;
+  --text: #e0e0e0;
+  --text-dim: #8892b0;
+  --accent: #64ffda;
+  --criminal: #e74c3c;
+  --innocent: #2ecc71;
+  --unknown: #636e82;
+  --card-bg: #233554;
+  --radius: 12px;
+  --font: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  --mono: 'SF Mono', 'Fira Code', 'Consolas', monospace;
+}
+
+html { font-size: 18px; scroll-behavior: smooth; }
+
+body {
+  font-family: var(--font);
+  background: var(--bg);
+  color: var(--text);
+  line-height: 1.7;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ===== PROGRESS BAR ===== */
+#progress-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 4px; z-index: 1000;
+  background: rgba(255,255,255,0.05);
+}
+#progress-fill {
+  height: 100%; width: 0%;
+  background: linear-gradient(90deg, var(--accent), #a78bfa);
+  transition: width 0.5s ease;
+  border-radius: 0 2px 2px 0;
+}
+
+/* ===== PROGRESS DOTS ===== */
+#progress-dots {
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  display: flex; gap: 6px; z-index: 1000;
+  padding: 6px 14px;
+  background: rgba(15,15,35,0.85);
+  backdrop-filter: blur(10px);
+  border-radius: 20px;
+  border: 1px solid rgba(100,255,218,0.08);
+}
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  transition: all 0.3s ease;
+  cursor: pointer;
+}
+.dot.active { background: var(--accent); box-shadow: 0 0 8px var(--accent); transform: scale(1.3); }
+.dot.visited { background: rgba(100,255,218,0.35); }
+
+/* ===== PAGE CONTAINER ===== */
+#pages-container {
+  position: relative;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 80px 24px 120px;
+  min-height: 100vh;
+}
+
+.page {
+  display: none;
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+  min-height: 60vh;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+}
+.page.hidden { display: none !important; }
+.page.active {
+  display: flex !important;
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.page h1 {
+  font-size: 2.2rem;
+  font-weight: 800;
+  margin-bottom: 1rem;
+  background: linear-gradient(135deg, #fff, var(--accent));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  line-height: 1.3;
+}
+.page h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  color: #fff;
+}
+.page p {
+  max-width: 560px;
+  color: var(--text-dim);
+  margin-bottom: 0.8rem;
+  font-size: 1.05rem;
+}
+.page p strong { color: #fff; }
+.page .em { color: var(--accent); font-weight: 600; }
+
+/* ===== NAVIGATION ===== */
+#nav {
+  position: fixed; bottom: 0; left: 0; right: 0;
+  display: flex; justify-content: center; gap: 12px;
+  padding: 20px;
+  background: linear-gradient(transparent, var(--bg) 40%);
+  z-index: 900;
+}
+.nav-btn {
+  padding: 12px 32px;
+  border: none; border-radius: 30px;
+  font-size: 1rem; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  font-family: var(--font);
+}
+.nav-btn.next {
+  background: var(--accent);
+  color: var(--bg);
+}
+.nav-btn.next:hover { transform: translateY(-2px); box-shadow: 0 6px 20px rgba(100,255,218,0.3); }
+.nav-btn.prev {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-dim);
+  border: 1px solid rgba(255,255,255,0.1);
+}
+.nav-btn.prev:hover { background: rgba(255,255,255,0.1); color: #fff; }
+.nav-btn:disabled { opacity: 0.3; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
+
+/* ===== CARD GRID ===== */
+.card-grid {
+  display: grid;
+  gap: 12px;
+  margin: 1.5rem 0;
+}
+.card-grid.g3x3 { grid-template-columns: repeat(3, 100px); }
+.card-grid.g2x1 { grid-template-columns: repeat(2, 130px); }
+
+.card {
+  width: 100px; height: 120px;
+  perspective: 600px;
+  cursor: pointer;
+}
+.card.big { width: 130px; height: 150px; }
+.card-inner {
+  position: relative;
+  width: 100%; height: 100%;
+  transition: transform 0.6s ease;
+  transform-style: preserve-3d;
+}
+.card.flipped .card-inner { transform: rotateY(180deg); }
+
+.card-face {
+  position: absolute; inset: 0;
+  backface-visibility: hidden;
+  border-radius: var(--radius);
+  display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  font-size: 0.8rem;
+  padding: 8px;
+  border: 2px solid transparent;
+}
+.card-front {
+  background: var(--card-bg);
+  border-color: rgba(255,255,255,0.08);
+}
+.card-front .emoji { font-size: 2rem; margin-bottom: 4px; }
+.card-front .name { color: var(--text-dim); font-weight: 600; }
+
+.card-back {
+  background: var(--bg3);
+  transform: rotateY(180deg);
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-align: center;
+  line-height: 1.4;
+  padding: 10px;
+}
+.card-back .clue-text { font-weight: 600; color: #fff; margin-top: 4px; }
+
+.card.criminal .card-front { border-color: var(--criminal); }
+.card.criminal .card-front .name { color: var(--criminal); }
+.card.innocent .card-front { border-color: var(--innocent); }
+.card.innocent .card-front .name { color: var(--innocent); }
+.card.unknown .card-front { border-color: var(--unknown); }
+
+/* ===== BIG TEXT ===== */
+.big-rule {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--criminal);
+  text-transform: uppercase;
+  letter-spacing: 3px;
+  animation: pulse-glow 2s ease-in-out infinite;
+  margin: 1rem 0;
+}
+@keyframes pulse-glow {
+  0%, 100% { text-shadow: 0 0 20px rgba(231,76,60,0.3); }
+  50% { text-shadow: 0 0 40px rgba(231,76,60,0.6); }
+}
+
+/* ===== FORMULA BOX ===== */
+.formula-box {
+  background: rgba(100,255,218,0.05);
+  border: 1px solid rgba(100,255,218,0.15);
+  border-radius: var(--radius);
+  padding: 20px 28px;
+  margin: 1rem 0;
+  font-family: var(--mono);
+  font-size: 1rem;
+  color: var(--accent);
+  text-align: center;
+  line-height: 2;
+}
+.formula-box .var-c { color: var(--criminal); font-weight: 700; }
+.formula-box .var-i { color: var(--innocent); font-weight: 700; }
+.formula-box .op { color: var(--text-dim); }
+.formula-box .kw { color: #a78bfa; font-weight: 700; }
+
+/* ===== CLAUSE PIECES ===== */
+.clause-row {
+  display: flex; flex-wrap: wrap;
+  gap: 10px; justify-content: center;
+  margin: 1rem 0;
+}
+.clause {
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 10px 16px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  color: #fff;
+  transition: all 0.3s ease;
+}
+.clause.highlight {
+  border-color: var(--accent);
+  background: rgba(100,255,218,0.1);
+  box-shadow: 0 0 12px rgba(100,255,218,0.15);
+}
+.clause.satisfied {
+  border-color: var(--innocent);
+  background: rgba(46,204,113,0.1);
+}
+.clause.conflict {
+  border-color: var(--criminal);
+  background: rgba(231,76,60,0.1);
+}
+.clause .neg { color: var(--criminal); }
+.clause .pos { color: var(--innocent); }
+
+/* ===== INTERACTIVE CONTROLS ===== */
+.interact-area {
+  background: rgba(255,255,255,0.02);
+  border: 1px dashed rgba(255,255,255,0.1);
+  border-radius: var(--radius);
+  padding: 24px;
+  margin: 1.2rem 0;
+  width: 100%;
+  max-width: 500px;
+}
+.interact-area h3 {
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  color: var(--text-dim);
+  margin-bottom: 12px;
+}
+
+.btn {
+  padding: 8px 20px;
+  border: none; border-radius: 8px;
+  font-size: 0.9rem; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  font-family: var(--font);
+  margin: 4px;
+}
+.btn-criminal { background: var(--criminal); color: #fff; }
+.btn-criminal:hover { background: #c0392b; }
+.btn-innocent { background: var(--innocent); color: #fff; }
+.btn-innocent:hover { background: #27ae60; }
+.btn-accent { background: var(--accent); color: var(--bg); }
+.btn-accent:hover { transform: translateY(-1px); }
+.btn-secondary { background: rgba(255,255,255,0.08); color: var(--text); border: 1px solid rgba(255,255,255,0.12); }
+.btn-secondary:hover { background: rgba(255,255,255,0.14); }
+
+.feedback {
+  margin-top: 12px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  display: none;
+}
+.feedback.correct {
+  display: block;
+  background: rgba(46,204,113,0.12);
+  border: 1px solid var(--innocent);
+  color: var(--innocent);
+}
+.feedback.wrong {
+  display: block;
+  background: rgba(231,76,60,0.12);
+  border: 1px solid var(--criminal);
+  color: var(--criminal);
+}
+
+/* ===== TREE VIZ ===== */
+.tree-viz {
+  margin: 1.2rem 0;
+  position: relative;
+}
+.tree-node {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 0 8px;
+  transition: all 0.4s ease;
+}
+.tree-label {
+  background: var(--card-bg);
+  border: 2px solid rgba(255,255,255,0.1);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: #fff;
+  margin-bottom: 6px;
+}
+.tree-label.try-true { border-color: var(--innocent); }
+.tree-label.try-false { border-color: var(--criminal); }
+.tree-label.backtrack { border-color: var(--criminal); opacity: 0.4; text-decoration: line-through; }
+.tree-label.success { border-color: var(--innocent); background: rgba(46,204,113,0.15); }
+.tree-children {
+  display: flex; gap: 16px; position: relative;
+  padding-top: 16px;
+}
+.tree-children::before {
+  content: '';
+  position: absolute; top: 0; left: 50%;
+  width: 1px; height: 16px;
+  background: rgba(255,255,255,0.15);
+}
+
+/* ===== DEDUCTION TRACE TABLE ===== */
+.trace-table {
+  width: 100%; max-width: 500px;
+  border-collapse: separate;
+  border-spacing: 0 4px;
+  margin: 1rem 0;
+  font-size: 0.85rem;
+}
+.trace-table th {
+  padding: 8px 12px;
+  text-align: left;
+  color: var(--text-dim);
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.7rem;
+  letter-spacing: 1px;
+}
+.trace-table td {
+  padding: 8px 12px;
+  background: var(--card-bg);
+}
+.trace-table tr td:first-child { border-radius: 6px 0 0 6px; }
+.trace-table tr td:last-child { border-radius: 0 6px 6px 0; }
+.trace-row {
+  opacity: 0;
+  transform: translateX(-10px);
+  transition: all 0.4s ease;
+}
+.trace-row.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+.verdict-c { color: var(--criminal); font-weight: 700; }
+.verdict-i { color: var(--innocent); font-weight: 700; }
+.verdict-u { color: var(--unknown); font-weight: 700; }
+
+/* ===== ARCHITECTURE DIAGRAM ===== */
+.arch-diagram {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  margin: 1.2rem 0;
+}
+.arch-row {
+  display: flex; gap: 16px; align-items: center;
+  flex-wrap: wrap; justify-content: center;
+}
+.arch-box {
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 14px 20px;
+  text-align: center;
+  font-size: 0.85rem;
+  font-weight: 600;
+  min-width: 120px;
+  transition: all 0.3s ease;
+}
+.arch-box.engine { border-color: rgba(167,139,250,0.4); color: #a78bfa; }
+.arch-box.agent { border-color: rgba(100,255,218,0.4); color: var(--accent); }
+.arch-box.solver { border-color: rgba(251,191,36,0.4); color: #fbbf24; }
+.arch-box .sub { font-size: 0.7rem; color: var(--text-dim); font-weight: 400; margin-top: 4px; }
+.arch-arrow {
+  color: var(--text-dim);
+  font-size: 1.4rem;
+  line-height: 1;
+}
+.arch-arrow.down { transform: rotate(90deg); }
+
+/* ===== CLUE TYPE SELECTOR ===== */
+.clue-selector {
+  display: flex; flex-wrap: wrap;
+  gap: 8px; justify-content: center;
+  margin: 1rem 0;
+}
+.clue-tab {
+  padding: 8px 16px;
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-dim);
+  cursor: pointer;
+  font-family: var(--font);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: all 0.2s ease;
+}
+.clue-tab.active {
+  border-color: var(--accent);
+  color: var(--accent);
+  background: rgba(100,255,218,0.08);
+}
+.clue-tab:hover { border-color: rgba(255,255,255,0.3); color: #fff; }
+
+.cnf-output {
+  background: rgba(0,0,0,0.3);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: var(--radius);
+  padding: 20px;
+  margin: 0.8rem 0;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  line-height: 2;
+  color: var(--text);
+  text-align: left;
+  min-height: 80px;
+  transition: all 0.3s ease;
+}
+
+/* ===== UP PROPAGATION VIZ ===== */
+.up-viz {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+  margin: 1rem 0;
+  width: 100%; max-width: 440px;
+}
+.up-clause {
+  display: flex; align-items: center; gap: 6px;
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  padding: 8px 14px;
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  width: 100%;
+  justify-content: center;
+  transition: all 0.5s ease;
+}
+.up-clause.processing { border-color: #fbbf24; background: rgba(251,191,36,0.08); }
+.up-clause.resolved { border-color: var(--innocent); background: rgba(46,204,113,0.06); opacity: 0.5; }
+.up-clause.unit { border-color: var(--accent); background: rgba(100,255,218,0.08); }
+.up-lit {
+  padding: 2px 8px; border-radius: 4px;
+  transition: all 0.3s ease;
+}
+.up-lit.true-val { background: rgba(46,204,113,0.2); color: var(--innocent); }
+.up-lit.false-val { background: rgba(231,76,60,0.2); color: var(--criminal); text-decoration: line-through; }
+.up-lit.forced { background: rgba(100,255,218,0.2); color: var(--accent); font-weight: 700; }
+
+/* ===== WALL DIAGRAM ===== */
+.wall-diagram {
+  display: flex;
+  align-items: stretch;
+  gap: 0;
+  margin: 1.2rem 0;
+  width: 100%; max-width: 500px;
+}
+.wall-side {
+  flex: 1;
+  padding: 20px;
+  display: flex; flex-direction: column;
+  align-items: center; gap: 10px;
+}
+.wall-side.engine-side { background: rgba(167,139,250,0.06); border-radius: 12px 0 0 12px; }
+.wall-side.agent-side { background: rgba(100,255,218,0.06); border-radius: 0 12px 12px 0; }
+.wall-divider {
+  width: 4px;
+  background: repeating-linear-gradient(0deg, var(--unknown) 0px, var(--unknown) 8px, transparent 8px, transparent 16px);
+  position: relative;
+}
+.wall-divider::after {
+  content: '🧱';
+  position: absolute;
+  top: 50%; left: 50%;
+  transform: translate(-50%,-50%);
+  font-size: 1.2rem;
+}
+.wall-label {
+  font-weight: 700;
+  font-size: 0.9rem;
+  margin-bottom: 6px;
+}
+.wall-item {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  background: rgba(0,0,0,0.2);
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+/* ===== STEP INDICATOR ===== */
+.step-indicator {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  margin-bottom: 1rem;
+}
+
+/* ===== ENTAILMENT VIZ ===== */
+.entailment-box {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 12px;
+  margin: 1rem 0;
+  width: 100%; max-width: 440px;
+}
+.ent-row {
+  display: flex; align-items: center; gap: 10px;
+  font-family: var(--mono);
+  font-size: 0.9rem;
+  width: 100%;
+  justify-content: center;
+  padding: 10px;
+  border-radius: 8px;
+  transition: all 0.4s ease;
+}
+.ent-row.test-c { background: rgba(231,76,60,0.06); border: 1px solid rgba(231,76,60,0.15); }
+.ent-row.test-i { background: rgba(46,204,113,0.06); border: 1px solid rgba(46,204,113,0.15); }
+.ent-result {
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-weight: 700;
+  font-size: 0.8rem;
+}
+.ent-result.unsat { background: rgba(231,76,60,0.15); color: var(--criminal); }
+.ent-result.sat { background: rgba(46,204,113,0.15); color: var(--innocent); }
+
+/* ===== CYCLE DIAGRAM ===== */
+.cycle-diagram {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 1.2rem 0;
+}
+.cycle-step {
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 10px;
+  padding: 12px 16px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-align: center;
+  min-width: 100px;
+  transition: all 0.3s ease;
+}
+.cycle-step.active-step {
+  border-color: var(--accent);
+  background: rgba(100,255,218,0.08);
+  color: var(--accent);
+}
+.cycle-arrow {
+  color: var(--text-dim);
+  font-size: 1.2rem;
+}
+
+/* ===== MISSION CARDS ===== */
+.mission-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 12px;
+  margin: 1rem 0;
+  width: 100%; max-width: 460px;
+}
+.mission-card {
+  background: var(--card-bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 10px;
+  padding: 16px;
+  text-align: left;
+}
+.mission-card .mc-icon { font-size: 1.5rem; margin-bottom: 6px; }
+.mission-card .mc-title { font-weight: 700; font-size: 0.85rem; color: #fff; margin-bottom: 4px; }
+.mission-card .mc-desc { font-size: 0.75rem; color: var(--text-dim); line-height: 1.4; }
+
+/* ===== RESPONSIVE ===== */
+@media (max-width: 600px) {
+  html { font-size: 16px; }
+  .page h1 { font-size: 1.7rem; }
+  .big-rule { font-size: 1.8rem; }
+  .card-grid.g3x3 { grid-template-columns: repeat(3, 80px); }
+  .card { width: 80px; height: 100px; }
+  .card.big { width: 110px; height: 130px; }
+  .mission-grid { grid-template-columns: 1fr; }
+  .wall-diagram { flex-direction: column; }
+  .wall-side.engine-side { border-radius: 12px 12px 0 0; }
+  .wall-side.agent-side { border-radius: 0 0 12px 12px; }
+  .wall-divider { width: 100%; height: 4px;
+    background: repeating-linear-gradient(90deg, var(--unknown) 0px, var(--unknown) 8px, transparent 8px, transparent 16px);
+  }
+}
+
+/* ===== TITLE PAGE SPECIAL ===== */
+.title-subtitle {
+  font-size: 1rem;
+  color: var(--text-dim);
+  font-weight: 400;
+  margin-top: -0.5rem;
+  margin-bottom: 1.5rem;
+}
+.title-start-btn {
+  margin-top: 1rem;
+  padding: 14px 40px;
+  font-size: 1.1rem;
+}
+
+/* ===== ANIMATION HELPERS ===== */
+.fade-in {
+  animation: fadeIn 0.6s ease forwards;
+}
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(15px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.delay-1 { animation-delay: 0.2s; opacity: 0; }
+.delay-2 { animation-delay: 0.4s; opacity: 0; }
+.delay-3 { animation-delay: 0.6s; opacity: 0; }
+.delay-4 { animation-delay: 0.8s; opacity: 0; }
+
+/* Auto-solve highlight */
+.auto-highlight {
+  animation: autoHL 1s ease;
+}
+@keyframes autoHL {
+  0% { box-shadow: 0 0 0 rgba(100,255,218,0); }
+  50% { box-shadow: 0 0 20px rgba(100,255,218,0.4); }
+  100% { box-shadow: 0 0 0 rgba(100,255,218,0); }
+}
+</style>
+</head>
+<body>
+
+<!-- PROGRESS -->
+<div id="progress-bar"><div id="progress-fill"></div></div>
+<div id="progress-dots"></div>
+
+<!-- PAGES -->
+<div id="pages-container">
+
+<!-- ========== PAGE 0: TITLE ========== -->
+<div class="page hidden" data-page="0">
+  <div class="step-indicator fade-in">An Interactive Explainer</div>
+  <h1 class="fade-in delay-1">🔍 The Griductive Solver</h1>
+  <p class="title-subtitle fade-in delay-2">How to catch criminals with pure logic.<br>No guessing allowed.</p>
+  <p class="fade-in delay-3">Inspired by <em>The Evolution of Trust</em> by Nicky Case</p>
+  <button class="nav-btn next title-start-btn fade-in delay-4" onclick="goNext()">Let's begin →</button>
+</div>
+
+<!-- ========== PAGE 1: MEET THE SUSPECTS ========== -->
+<div class="page hidden" data-page="1">
+  <div class="step-indicator">Act 1 · The Game</div>
+  <h1>Meet the suspects.</h1>
+  <p>In <strong>Griductive</strong>, every person is secretly a <span style="color:var(--criminal)">Criminal 🔴</span> or <span style="color:var(--innocent)">Innocent 🟢</span>.</p>
+  <p>Some faces are revealed. Others? Hidden. <em>Click a card to peek.</em></p>
+  <div class="card-grid g3x3" id="grid-page1">
+    <!-- built by JS -->
+  </div>
+</div>
+
+<!-- ========== PAGE 2: CLUES ========== -->
+<div class="page hidden" data-page="2">
+  <div class="step-indicator">Act 1 · The Game</div>
+  <h1>Each person carries a clue.</h1>
+  <p>Every clue is <strong>TRUE</strong> — this isn't a liar puzzle.</p>
+  <p>But you can only <em>see</em> a clue after you've proven that person's identity.</p>
+  <div style="margin:1.2rem 0">
+    <div class="card big" id="clue-demo-card" onclick="flipClueDemo()">
+      <div class="card-inner">
+        <div class="card-face card-front innocent">
+          <div class="emoji">🧑‍💼</div>
+          <div class="name">Alice</div>
+          <div style="font-size:0.7rem;color:var(--innocent);margin-top:4px">✓ INNOCENT</div>
+        </div>
+        <div class="card-face card-back">
+          <div style="font-size:1.4rem;margin-bottom:6px">📜</div>
+          <div class="clue-text">"Exactly 1 criminal among Alice &amp; Bob."</div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <p style="font-size:0.85rem">👆 Flip the card to reveal Alice's clue.</p>
+</div>
+
+<!-- ========== PAGE 3: THE GOLDEN RULE ========== -->
+<div class="page hidden" data-page="3">
+  <div class="step-indicator">Act 1 · The Game</div>
+  <h1>The golden rule:</h1>
+  <div class="big-rule">NO GUESSING</div>
+  <p>You can only declare someone Criminal or Innocent when <strong>logic FORCES it</strong>.</p>
+  <p>If you can't prove it? <em>You wait.</em></p>
+</div>
+
+<!-- ========== PAGE 4: LET'S TRY IT ========== -->
+<div class="page hidden" data-page="4">
+  <div class="step-indicator">Act 1 · The Game</div>
+  <h1>Let's try it.</h1>
+  <p>Alice is proven <span style="color:var(--innocent)">Innocent</span>. Her clue says:</p>
+  <div class="formula-box">"Exactly 1 criminal among {Alice, Bob}"</div>
+  <p>Alice is Innocent (not a criminal). So what must Bob be?</p>
+  <div class="interact-area" id="try-interact">
+    <h3>Your verdict for Bob</h3>
+    <button class="btn btn-innocent" onclick="tryVerdict('innocent')">🟢 Innocent</button>
+    <button class="btn btn-criminal" onclick="tryVerdict('criminal')">🔴 Criminal</button>
+    <div class="feedback" id="try-feedback"></div>
+  </div>
+</div>
+
+<!-- ========== PAGE 5: PROPOSITIONAL VARIABLES ========== -->
+<div class="page hidden" data-page="5">
+  <div class="step-indicator">Act 2 · The Logic</div>
+  <h1>How do we "know for sure"?</h1>
+  <p>We give each person a <strong>propositional variable</strong>.</p>
+  <div class="formula-box">
+    <span class="var-c">C<sub>Alice</sub></span> <span class="op">=</span> <span class="kw">True</span> <span class="op">→</span> Criminal<br>
+    <span class="var-c">C<sub>Alice</sub></span> <span class="op">=</span> <span class="kw">False</span> <span class="op">→</span> Innocent
+  </div>
+  <p>Now every clue can be written as a <em>logical formula</em>.</p>
+</div>
+
+<!-- ========== PAGE 6: CLUES BECOME LOGIC ========== -->
+<div class="page hidden" data-page="6">
+  <div class="step-indicator">Act 2 · The Logic</div>
+  <h1>Clues become logic.</h1>
+  <p>"Exactly 1 criminal among {Alice, Bob}" becomes:</p>
+  <div class="formula-box" id="formula-anim">
+    <div style="margin-bottom:8px;color:var(--text-dim);font-size:0.8rem">English ↓ Logic</div>
+    <span class="op">(</span><span class="var-c">C<sub>A</sub></span> <span class="op">∧ ¬</span><span class="var-c">C<sub>B</sub></span><span class="op">)</span>
+    <span class="op"> ∨ </span>
+    <span class="op">(¬</span><span class="var-c">C<sub>A</sub></span> <span class="op">∧</span> <span class="var-c">C<sub>B</sub></span><span class="op">)</span>
+  </div>
+  <p>Either Alice is the criminal, or Bob is — but <strong>not both</strong>.</p>
+</div>
+
+<!-- ========== PAGE 7: WHAT'S CNF? ========== -->
+<div class="page hidden" data-page="7">
+  <div class="step-indicator">Act 2 · The Logic</div>
+  <h1>What's CNF?</h1>
+  <p><strong>Conjunctive Normal Form</strong> — a formula written as an AND of ORs.</p>
+  <p>Think of it as puzzle pieces that <em>must ALL be true</em>.</p>
+  <div class="clause-row">
+    <div class="clause"><span class="pos">C<sub>A</sub></span> ∨ <span class="pos">C<sub>B</sub></span></div>
+    <div style="color:var(--text-dim);font-size:1.5rem;display:flex;align-items:center">∧</div>
+    <div class="clause"><span class="neg">¬C<sub>A</sub></span> ∨ <span class="neg">¬C<sub>B</sub></span></div>
+  </div>
+  <p style="font-size:0.85rem;margin-top:0.5rem">Clause 1: "At least one criminal." &nbsp; Clause 2: "At most one criminal."</p>
+</div>
+
+<!-- ========== PAGE 8: CONVERTING CLUES TO CNF ========== -->
+<div class="page hidden" data-page="8">
+  <div class="step-indicator">Act 2 · The Logic</div>
+  <h1>Converting clues to CNF</h1>
+  <p>Click a clue type to see how it converts.</p>
+  <div class="clue-selector" id="clue-tabs">
+    <button class="clue-tab active" onclick="showClueType('fact')">FACT</button>
+    <button class="clue-tab" onclick="showClueType('same')">SAME</button>
+    <button class="clue-tab" onclick="showClueType('diff')">DIFFERENT</button>
+    <button class="clue-tab" onclick="showClueType('exactly')">EXACTLY N</button>
+  </div>
+  <div class="cnf-output" id="cnf-output">
+    <!-- filled by JS -->
+  </div>
+</div>
+
+<!-- ========== PAGE 9: ENTER DPLL ========== -->
+<div class="page hidden" data-page="9">
+  <div class="step-indicator">Act 3 · The Solver</div>
+  <h1>Enter DPLL.</h1>
+  <p>We have clauses. Now we need a <strong>robot</strong> that can answer:</p>
+  <div class="formula-box" style="font-size:1.2rem">
+    "Is this formula <span class="kw">satisfiable</span>?"
+  </div>
+  <p><strong>DPLL</strong> (Davis–Putnam–Logemann–Loveland) is a classic algorithm that does exactly this. It has two weapons:</p>
+  <div style="display:flex;gap:16px;margin-top:0.8rem">
+    <div class="clause" style="text-align:center;flex:1"><span style="font-size:1.2rem">⚡</span><br>Unit<br>Propagation</div>
+    <div class="clause" style="text-align:center;flex:1"><span style="font-size:1.2rem">🔀</span><br>Branch &<br>Backtrack</div>
+  </div>
+</div>
+
+<!-- ========== PAGE 10: UNIT PROPAGATION ========== -->
+<div class="page hidden" data-page="10">
+  <div class="step-indicator">Act 3 · The Solver</div>
+  <h1>Unit Propagation</h1>
+  <p>If a clause has <strong>only one literal</strong>, its value is <em>forced</em>. This can simplify everything else.</p>
+  <div class="interact-area">
+    <h3>Watch it propagate</h3>
+    <div class="up-viz" id="up-viz">
+      <div class="up-clause unit" id="up-c1">
+        <span class="up-lit forced">C<sub>A</sub></span>
+        <span style="color:var(--text-dim);font-size:0.7rem;margin-left:6px">← unit clause!</span>
+      </div>
+      <div class="up-clause" id="up-c2">
+        <span class="up-lit" id="up-c2-l1">¬C<sub>A</sub></span>
+        <span style="color:var(--text-dim);margin:0 4px">∨</span>
+        <span class="up-lit" id="up-c2-l2">C<sub>B</sub></span>
+      </div>
+      <div class="up-clause" id="up-c3">
+        <span class="up-lit" id="up-c3-l1">¬C<sub>A</sub></span>
+        <span style="color:var(--text-dim);margin:0 4px">∨</span>
+        <span class="up-lit" id="up-c3-l2">¬C<sub>B</sub></span>
+      </div>
+    </div>
+    <button class="btn btn-accent" id="up-btn" onclick="runUnitProp()">⚡ Propagate</button>
+    <div id="up-narration" style="margin-top:10px;font-size:0.85rem;color:var(--text-dim);min-height:3em"></div>
+  </div>
+</div>
+
+<!-- ========== PAGE 11: BRANCH AND BACKTRACK ========== -->
+<div class="page hidden" data-page="11">
+  <div class="step-indicator">Act 3 · The Solver</div>
+  <h1>Branch & Backtrack</h1>
+  <p>When propagation isn't enough, <strong>pick a variable</strong>, try True, then False. If you hit a contradiction — <em>backtrack</em>.</p>
+  <div class="interact-area">
+    <h3>Decision tree</h3>
+    <div style="display:flex;flex-direction:column;align-items:center;gap:8px" id="tree-area">
+      <div class="tree-node">
+        <div class="tree-label" id="t-root">C<sub>A</sub> = ?</div>
+        <div class="tree-children">
+          <div class="tree-node">
+            <div class="tree-label try-true" id="t-left">True ✓</div>
+            <div style="font-size:0.7rem;color:var(--innocent);margin-top:4px" id="t-left-res"></div>
+          </div>
+          <div class="tree-node">
+            <div class="tree-label try-false" id="t-right">False ✗</div>
+            <div style="font-size:0.7rem;color:var(--criminal);margin-top:4px" id="t-right-res"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="btn btn-accent" id="tree-btn" onclick="runTreeDemo()">🔀 Branch</button>
+    <div id="tree-narration" style="margin-top:10px;font-size:0.85rem;color:var(--text-dim);min-height:2em"></div>
+  </div>
+</div>
+
+<!-- ========== PAGE 12: ENTAILMENT ========== -->
+<div class="page hidden" data-page="12">
+  <div class="step-indicator">Act 3 · The Solver</div>
+  <h1>The key insight: Entailment</h1>
+  <p>Finding <strong>one</strong> solution isn't enough. We need to prove it's the <em>only</em> possibility.</p>
+  <div class="entailment-box">
+    <div class="ent-row test-c" id="ent-test-c">
+      <span>KB ∧ ¬C<sub>i</sub></span>
+      <span style="color:var(--text-dim)">→</span>
+      <span class="ent-result" id="ent-res-c">?</span>
+      <span style="font-size:0.75rem;color:var(--text-dim)" id="ent-meaning-c"></span>
+    </div>
+    <div class="ent-row test-i" id="ent-test-i">
+      <span>KB ∧ C<sub>i</sub></span>
+      <span style="color:var(--text-dim)">→</span>
+      <span class="ent-result" id="ent-res-i">?</span>
+      <span style="font-size:0.75rem;color:var(--text-dim)" id="ent-meaning-i"></span>
+    </div>
+  </div>
+  <button class="btn btn-accent" id="ent-btn" onclick="runEntailment()">🧪 Test entailment</button>
+  <div id="ent-narration" style="margin-top:10px;font-size:0.85rem;color:var(--text-dim);min-height:2em"></div>
+</div>
+
+<!-- ========== PAGE 13: DEDUCTION LOOP ========== -->
+<div class="page hidden" data-page="13">
+  <div class="step-indicator">Act 4 · The Agent</div>
+  <h1>The Deduction Loop</h1>
+  <p>The agent repeats this cycle until no more verdicts can be found:</p>
+  <div class="cycle-diagram" id="cycle-diagram">
+    <div class="cycle-step active-step" id="cy-1">🔍 Check<br>unknowns</div>
+    <div class="cycle-arrow">→</div>
+    <div class="cycle-step" id="cy-2">⚡ Find<br>forced</div>
+    <div class="cycle-arrow">→</div>
+    <div class="cycle-step" id="cy-3">📨 Submit<br>verdict</div>
+    <div class="cycle-arrow">→</div>
+    <div class="cycle-step" id="cy-4">📜 Reveal<br>clue</div>
+    <div class="cycle-arrow">→</div>
+    <div class="cycle-step" id="cy-5">🔁 Repeat</div>
+  </div>
+  <button class="btn btn-accent" onclick="animateCycle()">▶ Watch the cycle</button>
+</div>
+
+<!-- ========== PAGE 14: WATCH IT SOLVE ========== -->
+<div class="page hidden" data-page="14">
+  <div class="step-indicator">Act 4 · The Agent</div>
+  <h1>Watch it solve!</h1>
+  <p>A 3×3 puzzle, solved step by step.</p>
+  <div class="interact-area" style="max-width:540px">
+    <h3>Deduction trace</h3>
+    <table class="trace-table" id="trace-table">
+      <thead><tr><th>Step</th><th>Person</th><th>Verdict</th><th>New Clue</th></tr></thead>
+      <tbody id="trace-body"></tbody>
+    </table>
+    <button class="btn btn-accent" id="solve-btn" onclick="autoSolve()">▶ Auto-solve</button>
+  </div>
+</div>
+
+<!-- ========== PAGE 15: AMBIGUITY ========== -->
+<div class="page hidden" data-page="15">
+  <div class="step-indicator">Act 4 · The Agent</div>
+  <h1>What about ambiguity?</h1>
+  <p>Sometimes logic isn't enough. Neither Criminal nor Innocent is forced.</p>
+  <div class="entailment-box">
+    <div class="ent-row test-c">
+      <span>KB ∧ ¬C<sub>x</sub></span>
+      <span style="color:var(--text-dim)">→</span>
+      <span class="ent-result sat">SAT ✓</span>
+    </div>
+    <div class="ent-row test-i">
+      <span>KB ∧ C<sub>x</sub></span>
+      <span style="color:var(--text-dim)">→</span>
+      <span class="ent-result sat">SAT ✓</span>
+    </div>
+  </div>
+  <p>Both are possible! The agent returns <span class="verdict-u">UNKNOWN</span> and moves on.</p>
+  <p style="font-size:0.85rem"><em>No guessing. Remember the golden rule.</em></p>
+</div>
+
+<!-- ========== PAGE 16: TWO ROLES ONE WALL ========== -->
+<div class="page hidden" data-page="16">
+  <div class="step-indicator">Act 5 · The Architecture</div>
+  <h1>Two roles, one wall.</h1>
+  <p>The <span style="color:#a78bfa">Game Engine</span> knows everything. The <span style="color:var(--accent)">Logic Agent</span> only knows what it's been told.</p>
+  <div class="wall-diagram">
+    <div class="wall-side engine-side">
+      <div class="wall-label" style="color:#a78bfa">🎮 Game Engine</div>
+      <div class="wall-item">Knows all identities</div>
+      <div class="wall-item">Validates verdicts</div>
+      <div class="wall-item">Reveals clues</div>
+    </div>
+    <div class="wall-divider"></div>
+    <div class="wall-side agent-side">
+      <div class="wall-label" style="color:var(--accent)">🤖 Logic Agent</div>
+      <div class="wall-item">Knows only clues</div>
+      <div class="wall-item">Builds KB (SAT)</div>
+      <div class="wall-item">Proves verdicts</div>
+    </div>
+  </div>
+  <p>The agent <strong>NEVER peeks</strong> at hidden data.</p>
+</div>
+
+<!-- ========== PAGE 17: PROJECT MAP ========== -->
+<div class="page hidden" data-page="17">
+  <div class="step-indicator">Act 5 · The Architecture</div>
+  <h1>The project map.</h1>
+  <p>Four modules. One mission.</p>
+  <div class="arch-diagram">
+    <div class="arch-row">
+      <div class="arch-box engine">🎮 GameEngine<div class="sub">game_engine.py</div></div>
+    </div>
+    <div class="arch-arrow down">↕</div>
+    <div class="arch-row">
+      <div class="arch-box agent">🤖 LogicAgent<div class="sub">logic_agent.py</div></div>
+    </div>
+    <div class="arch-arrow down">↓</div>
+    <div class="arch-row">
+      <div class="arch-box solver">⚙️ CNF Encoder<div class="sub">cnf_encoder.py</div></div>
+      <div class="arch-arrow">→</div>
+      <div class="arch-box solver">🧠 DPLL Solver<div class="sub">dpll_solver.py</div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ========== PAGE 18: YOUR MISSION ========== -->
+<div class="page hidden" data-page="18">
+  <div class="step-indicator">Act 5 · The Architecture</div>
+  <h1>Your mission.</h1>
+  <p>Build a no-guess grid-deduction solver. Here's the breakdown:</p>
+  <div class="mission-grid">
+    <div class="mission-card">
+      <div class="mc-icon">⚙️</div>
+      <div class="mc-title">CNF Encoder</div>
+      <div class="mc-desc">Translate every clue type into Conjunctive Normal Form clauses.</div>
+    </div>
+    <div class="mission-card">
+      <div class="mc-icon">🧠</div>
+      <div class="mc-title">DPLL Solver</div>
+      <div class="mc-desc">Build a SAT solver with unit propagation, pure literal elimination, and backtracking.</div>
+    </div>
+    <div class="mission-card">
+      <div class="mc-icon">🤖</div>
+      <div class="mc-title">Logic Agent</div>
+      <div class="mc-desc">Use entailment checking to prove verdicts without guessing.</div>
+    </div>
+    <div class="mission-card">
+      <div class="mc-icon">🎮</div>
+      <div class="mc-title">Game Engine</div>
+      <div class="mc-desc">Manage the puzzle state, validate verdicts, and reveal clues.</div>
+    </div>
+  </div>
+  <p style="margin-top:1rem"><strong>No guessing. Just logic.</strong> Good luck! 🍀</p>
+</div>
+
+</div><!-- end pages-container -->
+
+<!-- NAVIGATION -->
+<div id="nav">
+  <button class="nav-btn prev" id="btn-prev" onclick="goPrev()">← Back</button>
+  <button class="nav-btn next" id="btn-next" onclick="goNext()">Next →</button>
+</div>
+
+<script>
+// ===== PAGE MANAGEMENT =====
+const totalPages = 19; // 0..18
+let currentPage = 0;
+const visited = new Set([0]);
+
+function initDots() {
+  const container = document.getElementById('progress-dots');
+  for (let i = 0; i < totalPages; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'dot' + (i === 0 ? ' active' : '');
+    dot.onclick = () => goToPage(i);
+    container.appendChild(dot);
+  }
+}
+
+function updateProgress() {
+  document.getElementById('progress-fill').style.width = ((currentPage / (totalPages - 1)) * 100) + '%';
+  const dots = document.querySelectorAll('.dot');
+  dots.forEach((d, i) => {
+    d.classList.toggle('active', i === currentPage);
+    d.classList.toggle('visited', visited.has(i) && i !== currentPage);
+  });
+  document.getElementById('btn-prev').disabled = currentPage === 0;
+  document.getElementById('btn-next').disabled = currentPage === totalPages - 1;
+  // Hide nav on title page
+  document.getElementById('btn-prev').style.display = currentPage === 0 ? 'none' : '';
+}
+
+function goToPage(n) {
+  if (n < 0 || n >= totalPages) return;
+  // hide current
+  const cur = document.querySelector(`.page[data-page="${currentPage}"]`);
+  if (cur) { cur.classList.remove('active'); cur.classList.add('hidden'); }
+  currentPage = n;
+  visited.add(n);
+  const next = document.querySelector(`.page[data-page="${currentPage}"]`);
+  if (next) { next.classList.remove('hidden'); /* force reflow */ next.offsetHeight; next.classList.add('active'); }
+  updateProgress();
+  onPageEnter(n);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function goNext() { goToPage(currentPage + 1); }
+function goPrev() { goToPage(currentPage - 1); }
+
+// keyboard nav
+document.addEventListener('keydown', e => {
+  if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); goNext(); }
+  if (e.key === 'ArrowLeft') { e.preventDefault(); goPrev(); }
+});
+
+// ===== PAGE-SPECIFIC INIT =====
+function onPageEnter(n) {
+  if (n === 1) buildGrid1();
+  if (n === 8) showClueType('fact');
+  if (n === 10) resetUnitProp();
+  if (n === 11) resetTree();
+  if (n === 12) resetEntailment();
+  if (n === 14) resetTrace();
+}
+
+// ===== PAGE 1: GRID =====
+const people1 = [
+  { emoji: '🧑‍💼', name: 'Alice', type: 'innocent', flipped: false },
+  { emoji: '👨‍🔬', name: 'Bob', type: 'criminal', flipped: false },
+  { emoji: '👩‍🎨', name: 'Carol', type: 'innocent', flipped: false },
+  { emoji: '🧔', name: 'Dave', type: 'unknown', flipped: false },
+  { emoji: '👩‍🚀', name: 'Eve', type: 'criminal', flipped: false },
+  { emoji: '👨‍🍳', name: 'Frank', type: 'unknown', flipped: false },
+  { emoji: '👩‍⚕️', name: 'Grace', type: 'innocent', flipped: false },
+  { emoji: '🧑‍🎤', name: 'Hank', type: 'unknown', flipped: false },
+  { emoji: '👩‍💻', name: 'Ivy', type: 'criminal', flipped: false },
+];
+function buildGrid1() {
+  const grid = document.getElementById('grid-page1');
+  if (grid.children.length > 0) return; // already built
+  people1.forEach((p, i) => {
+    const card = document.createElement('div');
+    card.className = `card ${p.type}`;
+    card.onclick = () => card.classList.toggle('flipped');
+    const typeLabel = p.type === 'unknown' ? '❓' : p.type === 'criminal' ? '🔴 CRIMINAL' : '🟢 INNOCENT';
+    const typeColor = p.type === 'unknown' ? 'var(--unknown)' : p.type === 'criminal' ? 'var(--criminal)' : 'var(--innocent)';
+    card.innerHTML = `
+      <div class="card-inner">
+        <div class="card-face card-front">
+          <div class="emoji">${p.emoji}</div>
+          <div class="name">${p.name}</div>
+          ${p.type !== 'unknown' ? `<div style="font-size:0.6rem;color:${typeColor};margin-top:2px">${typeLabel}</div>` : '<div style="font-size:0.6rem;color:var(--unknown);margin-top:2px">❓ UNKNOWN</div>'}
+        </div>
+        <div class="card-face card-back">
+          <div style="font-size:1.2rem;margin-bottom:4px">📜</div>
+          <div class="clue-text" style="font-size:0.65rem">${getRandomClue(p.name)}</div>
+        </div>
+      </div>`;
+    grid.appendChild(card);
+  });
+}
+function getRandomClue(name) {
+  const clues = [
+    `"${name} and Dave have the SAME role."`,
+    `"Exactly 2 criminals in row 1."`,
+    `"${name} and Eve are DIFFERENT."`,
+    `"${name} is INNOCENT." (fact)`,
+    `"At least 1 criminal among neighbors."`,
+    `"SAME role as Frank."`,
+    `"Exactly 1 criminal in column 3."`,
+    `"DIFFERENT from Grace."`,
+    `"At most 2 criminals total."`,
+  ];
+  return clues[Math.floor(Math.random() * clues.length)];
+}
+
+// ===== PAGE 2: CLUE DEMO =====
+function flipClueDemo() {
+  document.getElementById('clue-demo-card').classList.toggle('flipped');
+}
+
+// ===== PAGE 4: TRY VERDICT =====
+function tryVerdict(v) {
+  const fb = document.getElementById('try-feedback');
+  if (v === 'criminal') {
+    fb.className = 'feedback correct';
+    fb.innerHTML = '✅ Correct! Since Alice is Innocent, and there\'s exactly 1 criminal among the two, Bob MUST be Criminal. Logic forced it!';
+  } else {
+    fb.className = 'feedback wrong';
+    fb.innerHTML = '❌ Think again. If Alice is Innocent and there\'s exactly 1 criminal... who\'s left?';
+  }
+}
+
+// ===== PAGE 8: CLUE TYPES =====
+const clueTypes = {
+  fact: {
+    english: '<strong>FACT:</strong> "Alice is Criminal."',
+    logic: 'This is the simplest clue — just a bare assertion.',
+    cnf: `<span style="color:var(--criminal)">C<sub>Alice</sub></span>\n\nThat's it. One clause, one literal.\nThe variable is forced to True.`,
+  },
+  same: {
+    english: '<strong>SAME:</strong> "Alice and Bob have the same role."',
+    logic: 'Both criminal, or both innocent.',
+    cnf: `<span style="color:var(--accent)">(¬C<sub>A</sub> ∨ C<sub>B</sub>)</span>  ∧  <span style="color:var(--accent)">(C<sub>A</sub> ∨ ¬C<sub>B</sub>)</span>\n\nClause 1: If A is criminal → B is criminal\nClause 2: If B is criminal → A is criminal`,
+  },
+  diff: {
+    english: '<strong>DIFFERENT:</strong> "Alice and Bob have different roles."',
+    logic: 'One is criminal, the other innocent.',
+    cnf: `<span style="color:var(--accent)">(C<sub>A</sub> ∨ C<sub>B</sub>)</span>  ∧  <span style="color:var(--accent)">(¬C<sub>A</sub> ∨ ¬C<sub>B</sub>)</span>\n\nClause 1: At least one is criminal\nClause 2: At most one is criminal`,
+  },
+  exactly: {
+    english: '<strong>EXACTLY N:</strong> "Exactly 1 criminal among {A, B, C}."',
+    logic: 'Combines "at least 1" with "at most 1".',
+    cnf: `<span style="color:var(--accent)">At least 1:</span>\n(C<sub>A</sub> ∨ C<sub>B</sub> ∨ C<sub>C</sub>)\n\n<span style="color:var(--accent)">At most 1 (pairwise):</span>\n(¬C<sub>A</sub> ∨ ¬C<sub>B</sub>) ∧ (¬C<sub>A</sub> ∨ ¬C<sub>C</sub>) ∧ (¬C<sub>B</sub> ∨ ¬C<sub>C</sub>)`,
+  },
+};
+function showClueType(type) {
+  document.querySelectorAll('.clue-tab').forEach(t => t.classList.remove('active'));
+  event.target.classList.add('active');
+  const d = clueTypes[type];
+  const out = document.getElementById('cnf-output');
+  out.innerHTML = `<div style="margin-bottom:10px;color:var(--text)">${d.english}</div><div style="margin-bottom:8px;color:var(--text-dim);font-size:0.8rem">${d.logic}</div><div style="white-space:pre-line">${d.cnf}</div>`;
+}
+
+// ===== PAGE 10: UNIT PROPAGATION =====
+let upStep = 0;
+function resetUnitProp() {
+  upStep = 0;
+  document.getElementById('up-c1').className = 'up-clause unit';
+  document.getElementById('up-c2').className = 'up-clause';
+  document.getElementById('up-c3').className = 'up-clause';
+  document.getElementById('up-c2-l1').className = 'up-lit';
+  document.getElementById('up-c2-l2').className = 'up-lit';
+  document.getElementById('up-c3-l1').className = 'up-lit';
+  document.getElementById('up-c3-l2').className = 'up-lit';
+  document.getElementById('up-c2-l1').innerHTML = '¬C<sub>A</sub>';
+  document.getElementById('up-c2-l2').innerHTML = 'C<sub>B</sub>';
+  document.getElementById('up-c3-l1').innerHTML = '¬C<sub>A</sub>';
+  document.getElementById('up-c3-l2').innerHTML = '¬C<sub>B</sub>';
+  document.getElementById('up-narration').textContent = '';
+  document.getElementById('up-btn').disabled = false;
+  document.getElementById('up-btn').textContent = '⚡ Propagate';
+}
+function runUnitProp() {
+  upStep++;
+  const narr = document.getElementById('up-narration');
+  if (upStep === 1) {
+    // C_A is forced true
+    narr.innerHTML = '<strong>Step 1:</strong> C<sub>A</sub> is a unit clause → C<sub>A</sub> = <span style="color:var(--innocent)">True</span>. Now simplify...';
+    document.getElementById('up-c1').classList.add('resolved');
+  } else if (upStep === 2) {
+    // ¬C_A becomes false in clause 2
+    document.getElementById('up-c2').classList.add('processing');
+    document.getElementById('up-c2-l1').classList.add('false-val');
+    document.getElementById('up-c2-l1').innerHTML = '<s>¬C<sub>A</sub></s>';
+    document.getElementById('up-c2-l2').classList.add('forced');
+    narr.innerHTML = '<strong>Step 2:</strong> ¬C<sub>A</sub> is false (removed). Clause 2 becomes unit: <span style="color:var(--accent)">C<sub>B</sub></span> is forced True!';
+  } else if (upStep === 3) {
+    document.getElementById('up-c2').classList.remove('processing');
+    document.getElementById('up-c2').classList.add('resolved');
+    document.getElementById('up-c3').classList.add('processing');
+    document.getElementById('up-c3-l1').classList.add('false-val');
+    document.getElementById('up-c3-l1').innerHTML = '<s>¬C<sub>A</sub></s>';
+    document.getElementById('up-c3-l2').classList.add('false-val');
+    document.getElementById('up-c3-l2').innerHTML = '<s>¬C<sub>B</sub></s>';
+    narr.innerHTML = '<strong>Step 3:</strong> C<sub>B</sub>=True makes ¬C<sub>B</sub> false too. ¬C<sub>A</sub> already gone. <span style="color:var(--criminal)">Empty clause → CONFLICT!</span>';
+    document.getElementById('up-c3').classList.remove('processing');
+    document.getElementById('up-c3').classList.add('conflict');
+    document.getElementById('up-btn').disabled = true;
+    document.getElementById('up-btn').textContent = '💥 Conflict detected';
+  }
+}
+
+// ===== PAGE 11: TREE DEMO =====
+let treeStep = 0;
+function resetTree() {
+  treeStep = 0;
+  document.getElementById('t-root').className = 'tree-label';
+  document.getElementById('t-root').innerHTML = 'C<sub>A</sub> = ?';
+  document.getElementById('t-left').className = 'tree-label try-true';
+  document.getElementById('t-left').textContent = 'True';
+  document.getElementById('t-left-res').textContent = '';
+  document.getElementById('t-right').className = 'tree-label try-false';
+  document.getElementById('t-right').textContent = 'False';
+  document.getElementById('t-right-res').textContent = '';
+  document.getElementById('tree-narration').textContent = '';
+  document.getElementById('tree-btn').disabled = false;
+  document.getElementById('tree-btn').textContent = '🔀 Branch';
+}
+function runTreeDemo() {
+  treeStep++;
+  const narr = document.getElementById('tree-narration');
+  if (treeStep === 1) {
+    document.getElementById('t-root').innerHTML = 'C<sub>A</sub> = <span style="color:var(--innocent)">True</span>';
+    document.getElementById('t-left').classList.add('backtrack');
+    document.getElementById('t-left-res').innerHTML = '💥 Contradiction!';
+    document.getElementById('t-left-res').style.color = 'var(--criminal)';
+    narr.innerHTML = 'Try C<sub>A</sub> = True → unit propagation finds a conflict. <strong>Backtrack!</strong>';
+  } else if (treeStep === 2) {
+    document.getElementById('t-root').innerHTML = 'C<sub>A</sub> = <span style="color:var(--criminal)">False</span>';
+    document.getElementById('t-right').classList.add('success');
+    document.getElementById('t-right-res').innerHTML = '✅ All clauses satisfied!';
+    document.getElementById('t-right-res').style.color = 'var(--innocent)';
+    narr.innerHTML = 'Try C<sub>A</sub> = False → propagation finds a satisfying assignment! <strong>SAT!</strong>';
+    document.getElementById('tree-btn').disabled = true;
+    document.getElementById('tree-btn').textContent = '✅ Found solution';
+  }
+}
+
+// ===== PAGE 12: ENTAILMENT =====
+let entStep = 0;
+function resetEntailment() {
+  entStep = 0;
+  document.getElementById('ent-res-c').className = 'ent-result';
+  document.getElementById('ent-res-c').textContent = '?';
+  document.getElementById('ent-meaning-c').textContent = '';
+  document.getElementById('ent-res-i').className = 'ent-result';
+  document.getElementById('ent-res-i').textContent = '?';
+  document.getElementById('ent-meaning-i').textContent = '';
+  document.getElementById('ent-narration').textContent = '';
+  document.getElementById('ent-btn').disabled = false;
+  document.getElementById('ent-btn').textContent = '🧪 Test entailment';
+}
+function runEntailment() {
+  entStep++;
+  const narr = document.getElementById('ent-narration');
+  if (entStep === 1) {
+    document.getElementById('ent-res-c').className = 'ent-result unsat';
+    document.getElementById('ent-res-c').textContent = 'UNSAT ✗';
+    document.getElementById('ent-meaning-c').textContent = '(can\'t be innocent)';
+    narr.innerHTML = 'Test: "Can C<sub>i</sub> be false (innocent)?" DPLL says <strong>UNSAT</strong> — impossible!';
+  } else if (entStep === 2) {
+    document.getElementById('ent-res-i').className = 'ent-result sat';
+    document.getElementById('ent-res-i').textContent = 'SAT ✓';
+    document.getElementById('ent-meaning-i').textContent = '(can be criminal)';
+    narr.innerHTML = 'Test: "Can C<sub>i</sub> be true (criminal)?" <strong>SAT</strong> — yes! Since innocent is impossible, <span style="color:var(--criminal)"><strong>they MUST be Criminal</strong></span>.';
+    document.getElementById('ent-btn').disabled = true;
+    document.getElementById('ent-btn').textContent = '🔴 Verdict: Criminal!';
+  }
+}
+
+// ===== PAGE 13: CYCLE ANIMATION =====
+let cycleTimer = null;
+function animateCycle() {
+  const steps = ['cy-1','cy-2','cy-3','cy-4','cy-5'];
+  let idx = 0;
+  if (cycleTimer) clearInterval(cycleTimer);
+  cycleTimer = setInterval(() => {
+    steps.forEach(s => document.getElementById(s).classList.remove('active-step'));
+    document.getElementById(steps[idx]).classList.add('active-step');
+    document.getElementById(steps[idx]).classList.add('auto-highlight');
+    idx = (idx + 1) % steps.length;
+  }, 800);
+  setTimeout(() => { clearInterval(cycleTimer); cycleTimer = null; }, 800 * 10);
+}
+
+// ===== PAGE 14: AUTO SOLVE =====
+const traceData = [
+  { step: 1, person: '🧑‍💼 Alice', verdict: 'INNOCENT', vclass: 'verdict-i', clue: '"Exactly 1 criminal in {A,B}"' },
+  { step: 2, person: '👨‍🔬 Bob', verdict: 'CRIMINAL', vclass: 'verdict-c', clue: '"B and E are SAME"' },
+  { step: 3, person: '👩‍🚀 Eve', verdict: 'CRIMINAL', vclass: 'verdict-c', clue: '"Exactly 2 criminals in {D,E,F}"' },
+  { step: 4, person: '👨‍🍳 Frank', verdict: 'UNKNOWN', vclass: 'verdict-u', clue: '—' },
+  { step: 5, person: '🧔 Dave', verdict: 'INNOCENT', vclass: 'verdict-i', clue: '"D and G are DIFFERENT"' },
+  { step: 6, person: '👩‍⚕️ Grace', verdict: 'CRIMINAL', vclass: 'verdict-c', clue: '"Exactly 3 criminals total"' },
+  { step: 7, person: '👨‍🍳 Frank', verdict: 'INNOCENT', vclass: 'verdict-i', clue: '"F is SAME as Alice"' },
+  { step: 8, person: '🧑‍🎤 Hank', verdict: 'UNKNOWN', vclass: 'verdict-u', clue: '—' },
+  { step: 9, person: '👩‍💻 Ivy', verdict: 'INNOCENT', vclass: 'verdict-i', clue: 'Done! 🎉' },
+];
+let traceBuilt = false;
+function resetTrace() {
+  traceBuilt = false;
+  document.getElementById('trace-body').innerHTML = '';
+  document.getElementById('solve-btn').disabled = false;
+  document.getElementById('solve-btn').textContent = '▶ Auto-solve';
+}
+function autoSolve() {
+  if (traceBuilt) return;
+  traceBuilt = true;
+  document.getElementById('solve-btn').disabled = true;
+  document.getElementById('solve-btn').textContent = '⏳ Solving...';
+  const tbody = document.getElementById('trace-body');
+  traceData.forEach((row, i) => {
+    setTimeout(() => {
+      const tr = document.createElement('tr');
+      tr.className = 'trace-row';
+      tr.innerHTML = `<td>${row.step}</td><td>${row.person}</td><td class="${row.vclass}">${row.verdict}</td><td style="font-size:0.75rem">${row.clue}</td>`;
+      tbody.appendChild(tr);
+      requestAnimationFrame(() => { tr.classList.add('visible'); });
+      if (i === traceData.length - 1) {
+        document.getElementById('solve-btn').textContent = '✅ Solved!';
+      }
+    }, i * 600);
+  });
+}
+
+// ===== INIT =====
+initDots();
+goToPage(0);
+</script>
+</body>
+</html>

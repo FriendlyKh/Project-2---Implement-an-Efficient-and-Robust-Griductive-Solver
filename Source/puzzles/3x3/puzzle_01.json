@@ -1,0 +1,118 @@
+{
+  "size": 3,
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Alice",
+      "profession": "Detective",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 1,
+        "region": {"type": "row", "value": 1},
+        "description": "Exactly 1 criminal in row 1."
+      }
+    },
+    {
+      "cell": "B1",
+      "name": "Bob",
+      "profession": "Doctor",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "SAME",
+        "cell_a": "B1",
+        "cell_b": "C2",
+        "region": {"type": "cells", "value": ["B1", "C2"]},
+        "description": "Bob and Clara have the same status."
+      }
+    },
+    {
+      "cell": "C1",
+      "name": "Clara",
+      "profession": "Guard",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "AT_MOST",
+        "k": 1,
+        "region": {"type": "column", "value": "C"},
+        "description": "At most 1 criminal in column C."
+      }
+    },
+    {
+      "cell": "A2",
+      "name": "David",
+      "profession": "Lawyer",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "FACT",
+        "target_cell": "A3",
+        "is_criminal": false,
+        "region": {"type": "cells", "value": ["A3"]},
+        "description": "Grace in A3 is Innocent."
+      }
+    },
+    {
+      "cell": "B2",
+      "name": "Eliza",
+      "profession": "Scientist",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 2,
+        "region": {"type": "row", "value": 2},
+        "description": "Exactly 2 criminals in row 2."
+      }
+    },
+    {
+      "cell": "C2",
+      "name": "Franz",
+      "profession": "Teacher",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "DIFFERENT",
+        "cell_a": "C2",
+        "cell_b": "A1",
+        "region": {"type": "cells", "value": ["C2", "A1"]},
+        "description": "Franz and Alice have different statuses."
+      }
+    },
+    {
+      "cell": "A3",
+      "name": "Grace",
+      "profession": "Architect",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 1,
+        "region": {"type": "row", "value": 3},
+        "description": "Exactly 1 criminal in row 3."
+      }
+    },
+    {
+      "cell": "B3",
+      "name": "Henry",
+      "profession": "Chef",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "AT_LEAST",
+        "k": 1,
+        "region": {"type": "column", "value": "B"},
+        "description": "At least 1 criminal in column B."
+      }
+    },
+    {
+      "cell": "C3",
+      "name": "Ivy",
+      "profession": "Journalist",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "FACT",
+        "target_cell": "B3",
+        "is_criminal": true,
+        "region": {"type": "cells", "value": ["B3"]},
+        "description": "Henry in B3 is Criminal."
+      }
+    }
+  ],
+  "initially_revealed": ["A1", "C3"]
+}

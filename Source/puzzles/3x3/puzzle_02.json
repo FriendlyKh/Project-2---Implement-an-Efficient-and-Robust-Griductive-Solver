@@ -1,0 +1,119 @@
+{
+  "size": 3,
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Alex",
+      "profession": "Judge",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "PARITY",
+        "parity": "odd",
+        "region": {"type": "row", "value": 1},
+        "description": "Odd number of criminals in row 1."
+      }
+    },
+    {
+      "cell": "B1",
+      "name": "Ben",
+      "profession": "Engineer",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "COMPARE",
+        "operator": ">",
+        "region": {"type": "row", "value": 1},
+        "region_b": {"type": "row", "value": 2},
+        "description": "More criminals in row 1 than row 2."
+      }
+    },
+    {
+      "cell": "C1",
+      "name": "Chloe",
+      "profession": "Pilot",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 0,
+        "region": {"type": "column", "value": "C"},
+        "description": "No criminals in column C."
+      }
+    },
+    {
+      "cell": "A2",
+      "name": "Daniel",
+      "profession": "Reporter",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "SAME",
+        "cell_a": "A2",
+        "cell_b": "A3",
+        "region": {"type": "cells", "value": ["A2", "A3"]},
+        "description": "Daniel and Emma have the same status."
+      }
+    },
+    {
+      "cell": "B2",
+      "name": "Elena",
+      "profession": "Mechanic",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "AT_MOST",
+        "k": 1,
+        "region": {"type": "row", "value": 2},
+        "description": "At most 1 criminal in row 2."
+      }
+    },
+    {
+      "cell": "C2",
+      "name": "Felix",
+      "profession": "Baker",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "DIFFERENT",
+        "cell_a": "C2",
+        "cell_b": "B1",
+        "region": {"type": "cells", "value": ["C2", "B1"]},
+        "description": "Felix and Ben have different statuses."
+      }
+    },
+    {
+      "cell": "A3",
+      "name": "Gia",
+      "profession": "Surgeon",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "FACT",
+        "target_cell": "B3",
+        "is_criminal": true,
+        "region": {"type": "cells", "value": ["B3"]},
+        "description": "Hugo in B3 is Criminal."
+      }
+    },
+    {
+      "cell": "B3",
+      "name": "Hugo",
+      "profession": "Captain",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 1,
+        "region": {"type": "row", "value": 3},
+        "description": "Exactly 1 criminal in row 3."
+      }
+    },
+    {
+      "cell": "C3",
+      "name": "Isla",
+      "profession": "Florist",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "FACT",
+        "target_cell": "A1",
+        "is_criminal": false,
+        "region": {"type": "cells", "value": ["A1"]},
+        "description": "Alex in A1 is Innocent."
+      }
+    }
+  ],
+  "initially_revealed": ["A1", "C1"]
+}

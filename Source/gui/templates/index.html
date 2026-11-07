@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Griductive Solver — Interactive GUI</title>
+    <style>
+        :root {
+            --bg-color: #0f111a;
+            --card-bg: #1a1e2e;
+            --card-border: #2a3147;
+            --criminal: #ff5252;
+            --innocent: #00e676;
+            --unknown: #607d8b;
+            --accent: #64ffda;
+            --text-main: #eceff1;
+            --text-dim: #90a4ae;
+            --highlight: #ffd700;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 24px;
+        }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding-bottom: 20px;
+            border-bottom: 1px solid var(--card-border);
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 26px;
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+
+        h1 span {
+            color: var(--accent);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        button {
+            background: #23293e;
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        button:hover {
+            border-color: var(--accent);
+            color: var(--accent);
+            transform: translateY(-1px);
+        }
+
+        button.primary {
+            background: var(--accent);
+            color: #0a192f;
+            border-color: var(--accent);
+        }
+
+        button.primary:hover {
+            background: #4cd3b0;
+        }
+
+        .main-container {
+            display: grid;
+            grid-template-columns: 1fr 340px;
+            gap: 28px;
+            flex: 1;
+        }
+
+        /* Board layout */
+        .board-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #141724;
+            border-radius: 12px;
+            border: 1px solid var(--card-border);
+            padding: 30px;
+        }
+
+        .grid-container {
+            display: grid;
+            gap: 12px;
+            margin-top: 20px;
+        }
+
+        .cell-card {
+            width: 130px;
+            height: 150px;
+            background: var(--card-bg);
+            border: 2px solid var(--card-border);
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            padding: 10px;
+            position: relative;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .cell-card:hover {
+            border-color: var(--accent);
+            transform: translateY(-2px);
+        }
+
+        .cell-card.highlighted {
+            border-color: var(--highlight) !important;
+            box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
+        }
+
+        .cell-card.criminal {
+            border-color: var(--criminal);
+            background: rgba(255, 82, 82, 0.08);
+        }
+
+        .cell-card.innocent {
+            border-color: var(--innocent);
+            background: rgba(0, 230, 118, 0.08);
+        }
+
+        .cell-header {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-dim);
+        }
+
+        .avatar {
+            font-size: 32px;
+            text-align: center;
+            margin: 6px 0;
+        }
+
+        .char-name {
+            font-size: 13px;
+            font-weight: 600;
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .char-role {
+            font-size: 11px;
+            color: var(--text-dim);
+            text-align: center;
+        }
+
+        .clue-box {
+            margin-top: auto;
+            font-size: 10px;
+            line-height: 1.2;
+            background: rgba(0,0,0,0.3);
+            padding: 4px;
+            border-radius: 4px;
+            color: var(--accent);
+        }
+
+        /* Sidebar */
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .panel {
+            background: #141724;
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            padding: 18px;
+        }
+
+        .panel-title {
+            font-size: 15px;
+            font-weight: 700;
+            margin-bottom: 12px;
+            color: var(--accent);
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 700;
+            text-transform: uppercase;
+        }
+
+        .badge-criminal { background: rgba(255,82,82,0.2); color: var(--criminal); }
+        .badge-innocent { background: rgba(0,230,118,0.2); color: var(--innocent); }
+
+        .log-box {
+            background: #0a0d16;
+            border-radius: 6px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 250px;
+            overflow-y: auto;
+            color: var(--text-dim);
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Griductive <span>Solver</span></h1>
+        <div class="controls">
+            <select id="puzzleSelect" style="background: #23293e; color: #fff; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
+                <option value="puzzles/3x3/puzzle_01.json">3×3 Puzzle #1</option>
+                <option value="puzzles/3x3/puzzle_02.json">3×3 Puzzle #2</option>
+                <option value="puzzles/4x4/puzzle_01.json">4×4 Puzzle #1</option>
+                <option value="puzzles/5x5/puzzle_01.json">5×5 Stress Test</option>
+            </select>
+            <button onclick="loadSelectedPuzzle()">Load</button>
+            <button onclick="restartPuzzle()">Restart</button>
+            <button onclick="requestHint()">💡 Hint</button>
+            <button class="primary" onclick="autoSolveStep()">Step</button>
+            <button class="primary" onclick="autoSolveAll()">⚡ Auto Solve</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <div class="board-wrapper">
+            <div id="boardMessage" style="color: var(--text-dim); margin-bottom: 10px;">Select a card to make a deduction or click a clue to highlight affected cells.</div>
+            <div class="grid-container" id="gridContainer">
+                <!-- Rendered dynamically -->
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <div class="panel">
+                <div class="panel-title">Selected Suspect</div>
+                <div id="selectedInfo">
+                    <p style="color: var(--text-dim); font-size: 13px;">Click a card on the grid to inspect details and submit a verdict.</p>
+                </div>
+                <div id="actionButtons" style="display: none; margin-top: 14px; gap: 8px;">
+                    <button style="border-color: var(--criminal); color: var(--criminal); flex: 1;" onclick="submitVerdict('CRIMINAL')">Call Criminal</button>
+                    <button style="border-color: var(--innocent); color: var(--innocent); flex: 1;" onclick="submitVerdict('INNOCENT')">Call Innocent</button>
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">Deduction Trace</div>
+                <div class="log-box" id="traceBox">
+                    <div>[0] System ready. Awaiting puzzle load.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentCell = null;
+
+        function logTrace(msg) {
+            const box = document.getElementById('traceBox');
+            const entry = document.createElement('div');
+            entry.textContent = msg;
+            box.appendChild(entry);
+            box.scrollTop = box.scrollHeight;
+        }
+
+        async function loadSelectedPuzzle() {
+            const path = document.getElementById('puzzleSelect').value;
+            logTrace(`Loading ${path}...`);
+            const res = await fetch('/api/load', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({puzzle_path: path})
+            });
+            const data = await res.json();
+            logTrace(data.message || 'Puzzle loaded.');
+        }
+
+        async function restartPuzzle() {
+            logTrace("Restarting puzzle...");
+            await fetch('/api/restart', {method: 'POST'});
+        }
+
+        async function requestHint() {
+            logTrace("Requesting deductive hint...");
+            const res = await fetch('/api/hint');
+            const data = await res.json();
+            logTrace(data.message || 'Hint received.');
+        }
+
+        async function autoSolveStep() {
+            logTrace("Advancing one step...");
+            const res = await fetch('/api/step', {method: 'POST'});
+            const data = await res.json();
+            logTrace(data.message || 'Step executed.');
+        }
+
+        async function autoSolveAll() {
+            logTrace("Auto-solving full puzzle...");
+            const res = await fetch('/api/auto', {method: 'POST'});
+            const data = await res.json();
+            logTrace(data.message || 'Auto solve complete.');
+        }
+
+        function submitVerdict(verdict) {
+            if (!currentCell) return;
+            logTrace(`Submitting ${verdict} for cell ${currentCell}...`);
+            fetch('/api/verdict', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({cell_id: currentCell, verdict: verdict})
+            }).then(r => r.json()).then(data => {
+                logTrace(data.message || `Verdict processed: ${data.status}`);
+            });
+        }
+    </script>
+</body>
+</html>

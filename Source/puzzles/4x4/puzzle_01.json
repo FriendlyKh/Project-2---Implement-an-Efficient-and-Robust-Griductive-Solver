@@ -1,0 +1,22 @@
+{
+  "size": 4,
+  "characters": [
+    {"cell": "A1", "name": "Abel", "profession": "Guard", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 1}, "description": "Exactly 1 criminal in row 1."}},
+    {"cell": "B1", "name": "Bea", "profession": "Cook", "status": "CRIMINAL", "clue": {"type": "SAME", "cell_a": "B1", "cell_b": "C2", "region": {"type": "cells", "value": ["B1", "C2"]}, "description": "Bea and Frank have same status."}},
+    {"cell": "C1", "name": "Clara", "profession": "Guard", "status": "INNOCENT", "clue": {"type": "AT_MOST", "k": 1, "region": {"type": "column", "value": "C"}, "description": "At most 1 criminal in column C."}},
+    {"cell": "D1", "name": "Derek", "profession": "Cook", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 0, "region": {"type": "column", "value": "D"}, "description": "No criminals in column D."}},
+    {"cell": "A2", "name": "Eliza", "profession": "Detective", "status": "INNOCENT", "clue": {"type": "DIFFERENT", "cell_a": "A2", "cell_b": "A1", "region": {"type": "cells", "value": ["A2", "A1"]}, "description": "Eliza and Abel have different status."}},
+    {"cell": "B2", "name": "Franz", "profession": "Detective", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "row", "value": 2}, "description": "Exactly 2 criminals in row 2."}},
+    {"cell": "C2", "name": "Grant", "profession": "Clerk", "status": "CRIMINAL", "clue": {"type": "AT_LEAST", "k": 1, "region": {"type": "row", "value": 2}, "description": "At least 1 criminal in row 2."}},
+    {"cell": "D2", "name": "Hannah", "profession": "Guard", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "B2", "is_criminal": true, "region": {"type": "cells", "value": ["B2"]}, "description": "Franz in B2 is Criminal."}},
+    {"cell": "A3", "name": "Ivy", "profession": "Clerk", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 3}, "description": "Exactly 1 criminal in row 3."}},
+    {"cell": "B3", "name": "Jonas", "profession": "Farmer", "status": "CRIMINAL", "clue": {"type": "SAME", "cell_a": "B3", "cell_b": "B1", "region": {"type": "cells", "value": ["B3", "B1"]}, "description": "Jonas and Bea have same status."}},
+    {"cell": "C3", "name": "Karl", "profession": "Painter", "status": "INNOCENT", "clue": {"type": "AT_MOST", "k": 1, "region": {"type": "row", "value": 3}, "description": "At most 1 criminal in row 3."}},
+    {"cell": "D3", "name": "Leo", "profession": "Farmer", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "A4", "is_criminal": false, "region": {"type": "cells", "value": ["A4"]}, "description": "Mara in A4 is Innocent."}},
+    {"cell": "A4", "name": "Mara", "profession": "Astronaut", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 4}, "description": "Exactly 1 criminal in row 4."}},
+    {"cell": "B4", "name": "Noah", "profession": "Clerk", "status": "CRIMINAL", "clue": {"type": "DIFFERENT", "cell_a": "B4", "cell_b": "C4", "region": {"type": "cells", "value": ["B4", "C4"]}, "description": "Noah and Owen have different status."}},
+    {"cell": "C4", "name": "Owen", "profession": "Judge", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "D4", "is_criminal": false, "region": {"type": "cells", "value": ["D4"]}, "description": "Priya in D4 is Innocent."}},
+    {"cell": "D4", "name": "Priya", "profession": "Lawyer", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "B4", "is_criminal": true, "region": {"type": "cells", "value": ["B4"]}, "description": "Noah in B4 is Criminal."}}
+  ],
+  "initially_revealed": ["A1", "D2", "C4"]
+}
