@@ -31,6 +31,7 @@ from models.clue import (
     SameClue,
 )
 from models.grid import Grid
+from models.clue import Region
 
 
 class SemanticEvaluator:
@@ -59,7 +60,21 @@ class SemanticEvaluator:
             ValueError: If the clue type is unknown.
         """
         # TODO: Implement dispatch to per-type evaluators
-        raise NotImplementedError("TODO: Implement SemanticEvaluator.evaluate()")
+        _dict = {
+            "FACT": self._eval_fact,
+            "SAME": self._eval_same,
+            "DIFFERENT": self._eval_different,
+            "EXACTLY": self._eval_exactly,
+            "AT_LEAST": self._eval_at_least,
+            "AT_MOST": self._eval_at_most,
+            "PARITY": self._eval_parity,
+            "COMPARE": self._eval_compare
+        }
+
+        handler = _dict.get(clue.clue_type.upper())
+        if handler is None:
+            raise ValueError("Unknown clue type.")
+        return handler(clue, assignment)
 
     def evaluate_all(
         self, clues: List[Clue], assignment: Dict[str, bool]
@@ -74,7 +89,12 @@ class SemanticEvaluator:
             Dictionary mapping clue description → satisfied (bool).
         """
         # TODO: Iterate over clues and call evaluate()
-        raise NotImplementedError("TODO: Implement SemanticEvaluator.evaluate_all()")
+        _dict = {}
+
+        for clue in clues:
+            _dict[clue.description] = self.evaluate(clue, assignment)
+
+        return _dict
 
     # ------------------------------------------------------------------
     # Per-type evaluators
@@ -83,51 +103,85 @@ class SemanticEvaluator:
     def _eval_fact(self, clue: FactClue, assignment: Dict[str, bool]) -> bool:
         """Evaluate a FACT clue."""
         # TODO: Check assignment[clue.target_cell] == clue.is_criminal
-        raise NotImplementedError("TODO: Implement _eval_fact()")
+        return assignment[clue.target_cell] == clue.is_criminal
 
     def _eval_same(self, clue: SameClue, assignment: Dict[str, bool]) -> bool:
         """Evaluate a SAME clue."""
         # TODO: Check assignment[cell_a] == assignment[cell_b]
-        raise NotImplementedError("TODO: Implement _eval_same()")
+        return assignment[clue.cell_a] == assignment[clue.cell_b]
 
     def _eval_different(
         self, clue: DifferentClue, assignment: Dict[str, bool]
     ) -> bool:
         """Evaluate a DIFFERENT clue."""
         # TODO: Check assignment[cell_a] != assignment[cell_b]
-        raise NotImplementedError("TODO: Implement _eval_different()")
+        return assignment[clue.cell_a] != assignment[clue.cell_b]
 
+    def _count_criminals(self, region: Region, assignment: Dict[str, bool]) -> int:
+        k = 0
+
+        for cell in self.grid.get_region(region):
+            if assignment[cell.cell_id]:
+                k += 1
+
+        return k
+    
     def _eval_exactly(
         self, clue: ExactlyClue, assignment: Dict[str, bool]
     ) -> bool:
         """Evaluate an EXACTLY clue."""
         # TODO: Count criminals in region and check == k
-        raise NotImplementedError("TODO: Implement _eval_exactly()")
+        k = self._count_criminals(clue.region, assignment)
+        return k == clue.k
 
     def _eval_at_least(
         self, clue: AtLeastClue, assignment: Dict[str, bool]
     ) -> bool:
         """Evaluate an AT_LEAST clue."""
         # TODO: Count criminals in region and check >= k
-        raise NotImplementedError("TODO: Implement _eval_at_least()")
+        k = self._count_criminals(clue.region, assignment)
+        return k >= clue.k
 
     def _eval_at_most(
         self, clue: AtMostClue, assignment: Dict[str, bool]
     ) -> bool:
         """Evaluate an AT_MOST clue."""
         # TODO: Count criminals in region and check <= k
-        raise NotImplementedError("TODO: Implement _eval_at_most()")
+        k = self._count_criminals(clue.region, assignment)
+        return k <= clue.k
 
     def _eval_parity(
         self, clue: ParityClue, assignment: Dict[str, bool]
     ) -> bool:
         """Evaluate a PARITY clue."""
         # TODO: Count criminals in region and check parity
-        raise NotImplementedError("TODO: Implement _eval_parity()")
+        if clue.parity not in ("even", "odd"):
+            raise ValueError("Unknown parity.")
+        
+        k = self._count_criminals(clue.region, assignment)
+        check = "even" if k % 2 == 0 else "odd"
+        return check == clue.parity
 
     def _eval_compare(
         self, clue: CompareClue, assignment: Dict[str, bool]
     ) -> bool:
         """Evaluate a COMPARE clue."""
         # TODO: Count criminals in both regions and compare
-        raise NotImplementedError("TODO: Implement _eval_compare()")
+        if clue.region_b is None:
+            raise ValueError("CompareClue requires region_b.")
+        
+        k1 = self._count_criminals(clue.region, assignment)
+        k2 = self._count_criminals(clue.region_b, assignment)
+
+        res = {
+            '>': k1 > k2,
+            '<': k1 < k2,
+            '>=': k1 >= k2,
+            '<=': k1 <= k2,
+            '==': k1 == k2,
+            '!=': k1 != k2
+        }
+
+        if clue.operator not in res:
+            raise ValueError("Unknown comparison operator.")
+        return res[clue.operator]

@@ -72,7 +72,20 @@ class VariableMap:
         #   2. Assign self._next_var
         #   3. Update all four maps
         #   4. Increment self._next_var
-        raise NotImplementedError("TODO: Implement VariableMap.register()")
+        if character_name in self._char_to_var:
+            raise ValueError("The character is already registered!")
+
+        if cell_id in self._cell_to_var:
+            raise ValueError("The cell is already registered!")
+
+        var = self._next_var
+        self._char_to_var[character_name] = var
+        self._cell_to_var[cell_id] = var
+        self._var_to_char[var] = character_name
+        self._var_to_cell[var] = cell_id
+
+        self._next_var += 1
+        return var
 
     def register_all(
         self, characters: List[Dict[str, str]]
@@ -87,7 +100,10 @@ class VariableMap:
             characters: List of ``{"name": "Alice", "cell": "A1", …}`` dicts.
         """
         # TODO: Sort by cell_id, then call register() for each
-        raise NotImplementedError("TODO: Implement VariableMap.register_all()")
+        characters = sorted(characters, key=lambda x: x['cell'])
+
+        for char in characters:
+            self.register(char['name'], char['cell'])
 
     # ------------------------------------------------------------------
     # Lookups
@@ -106,7 +122,9 @@ class VariableMap:
             KeyError: If *cell_id* is not registered.
         """
         # TODO: Implement lookup
-        raise NotImplementedError("TODO: Implement VariableMap.get_var()")
+        if cell_id in self._cell_to_var:
+            return self._cell_to_var[cell_id]
+        raise KeyError("Cell not registered!")
 
     def get_var_by_name(self, character_name: str) -> int:
         """Return the variable number for the given *character_name*.
@@ -121,7 +139,9 @@ class VariableMap:
             KeyError: If *character_name* is not registered.
         """
         # TODO: Implement lookup
-        raise NotImplementedError("TODO: Implement VariableMap.get_var_by_name()")
+        if character_name in self._char_to_var:
+            return self._char_to_var[character_name]
+        raise KeyError("Character not registered!")
 
     def get_character(self, var: int) -> str:
         """Return the character name for variable *var*.
@@ -136,7 +156,9 @@ class VariableMap:
             KeyError: If *var* is not registered.
         """
         # TODO: Implement reverse lookup
-        raise NotImplementedError("TODO: Implement VariableMap.get_character()")
+        if var in self._var_to_char:
+            return self._var_to_char[var]
+        raise KeyError("Variable not registered!")
 
     def get_cell_id(self, var: int) -> str:
         """Return the cell ID for variable *var*.
@@ -151,7 +173,9 @@ class VariableMap:
             KeyError: If *var* is not registered.
         """
         # TODO: Implement reverse lookup
-        raise NotImplementedError("TODO: Implement VariableMap.get_cell_id()")
+        if var in self._var_to_cell:
+            return self._var_to_cell[var]
+        raise KeyError("Variable not registered!")
 
     # ------------------------------------------------------------------
     # Info
