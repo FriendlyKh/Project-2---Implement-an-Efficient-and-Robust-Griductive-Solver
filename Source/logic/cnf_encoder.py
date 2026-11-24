@@ -23,6 +23,7 @@ requires them (e.g. Tseitin transformation for PARITY).
 """
 
 from __future__ import annotations
+import itertools
 
 from typing import Dict, List, Tuple
 
@@ -38,6 +39,7 @@ from models.clue import (
     SameClue,
 )
 from models.grid import Grid
+from models.clue import Region
 from logic.variable_map import VariableMap
 
 # Type alias: a clause is a list of signed ints, a CNF is a list of clauses.
@@ -87,7 +89,21 @@ class CNFEncoder:
         #       "SAME": self.encode_same,
         #       ...
         #   }
-        raise NotImplementedError("TODO: Implement CNFEncoder.encode_clue()")
+        dispatch = {
+            "FACT": self.encode_fact,
+            "SAME": self.encode_same,
+            "DIFFERENT": self.encode_different,
+            "EXACTLY": self.encode_exactly,
+            "AT_LEAST": self.encode_at_least,
+            "AT_MOST": self.encode_at_most,
+            "PARITY": self.encode_parity,
+            "COMPARE": self.encode_compare
+        }
+
+        handler = dispatch.get(clue.clue_type.upper())
+        if handler is None:
+            raise ValueError("Unknown clue type.")
+        return handler(clue)
 
     # ------------------------------------------------------------------
     # Per-clue-type encoders
@@ -106,7 +122,8 @@ class CNFEncoder:
             CNF with a single unit clause.
         """
         # TODO: Implement FACT encoding
-        raise NotImplementedError("TODO: Implement encode_fact()")
+        x = self.variable_map.get_var(clue.target_cell)
+        return [[x]] if clue.is_criminal else [[-x]]
 
     def encode_same(self, clue: SameClue) -> CNF:
         """Encode a SAME clue: two characters share status.
@@ -121,8 +138,10 @@ class CNFEncoder:
             CNF clauses encoding the biconditional.
         """
         # TODO: Implement SAME encoding
-        raise NotImplementedError("TODO: Implement encode_same()")
-
+        a = self.variable_map.get_var(clue.cell_a)
+        b = self.variable_map.get_var(clue.cell_b)
+        return [[-a, b], [a, -b]]
+    
     def encode_different(self, clue: DifferentClue) -> CNF:
         """Encode a DIFFERENT clue: two characters have different statuses.
 
@@ -136,7 +155,9 @@ class CNFEncoder:
             CNF clauses encoding the exclusive-or.
         """
         # TODO: Implement DIFFERENT encoding
-        raise NotImplementedError("TODO: Implement encode_different()")
+        a = self.variable_map.get_var(clue.cell_a)
+        b = self.variable_map.get_var(clue.cell_b)
+        return [[a, b], [-a, -b]]
 
     def encode_exactly(self, clue: ExactlyClue) -> CNF:
         """Encode an EXACTLY-k clue: exactly *k* criminals in a region.
@@ -152,8 +173,18 @@ class CNFEncoder:
             CNF clauses.
         """
         # TODO: Implement EXACTLY encoding using combinations
-        raise NotImplementedError("TODO: Implement encode_exactly()")
+        return self.encode_at_most(clue) + self.encode_at_least(clue)
 
+    def _encode_at_least_vars(self, variables: list[int], k: int) -> CNF:
+        n = len(variables)
+
+        if k <= 0:
+            return []
+
+        if k > n:
+            return [[]]
+        return [list(comb) for comb in itertools.combinations(variables, n - k + 1)]
+    
     def encode_at_least(self, clue: AtLeastClue) -> CNF:
         """Encode an AT_LEAST-k clue.
 
@@ -167,7 +198,18 @@ class CNFEncoder:
             CNF clauses.
         """
         # TODO: Implement AT_LEAST encoding
-        raise NotImplementedError("TODO: Implement encode_at_least()")
+        variables = self._get_vars_for_region(clue)
+        return self._encode_at_least_vars(variables, clue.k)
+
+    def _encode_at_most_vars(self, variables: list[int], k: int) -> CNF:
+        n = len(variables)
+
+        if k >= n:
+            return []
+
+        if k < 0:
+            return [[]]
+        return [[-v for v in comb] for comb in itertools.combinations(variables, k + 1)]
 
     def encode_at_most(self, clue: AtMostClue) -> CNF:
         """Encode an AT_MOST-k clue.
@@ -182,7 +224,8 @@ class CNFEncoder:
             CNF clauses.
         """
         # TODO: Implement AT_MOST encoding
-        raise NotImplementedError("TODO: Implement encode_at_most()")
+        variables = self._get_vars_for_region(clue)
+        return self._encode_at_most_vars(variables, clue.k)
 
     def encode_parity(self, clue: ParityClue) -> CNF:
         """Encode a PARITY clue (extension): odd/even criminals in a region.
@@ -197,7 +240,38 @@ class CNFEncoder:
         """
         # TODO: Implement PARITY encoding
         #   Hint: XOR of n variables can be encoded with O(n) auxiliary vars
-        raise NotImplementedError("TODO: Implement encode_parity()")
+        if clue.parity not in ("even", "odd"):
+            raise ValueError("Unknown parity.")
+
+        variables = self._get_vars_for_region(clue)
+        if not variables:
+            return [] if clue.parity == "even" else [[]]
+
+        clauses: CNF = []
+        prev = variables[0]
+
+        for x in variables[1:]:
+            aux = self._new_aux_var()
+            clauses.extend([
+                [-aux, prev, x],
+                [-aux, -prev, -x],
+                [aux, -prev, x],
+                [aux, prev, -x]
+            ])
+            prev = aux
+
+        clauses.append([prev] if clue.parity == "odd" else [-prev])
+        return clauses
+
+    def _vars_for_region(self, region: Region) -> List[int]:
+        cells = self.grid.get_region(region)
+        return sorted(self.variable_map.get_var(cell.cell_id) for cell in cells)
+    
+    def _encode_exactly_vars(self, variables: List[int], k: int) -> CNF:
+        return (
+            self._encode_at_least_vars(variables, k)
+            + self._encode_at_most_vars(variables, k)
+        )
 
     def encode_compare(self, clue: CompareClue) -> CNF:
         """Encode a COMPARE clue (extension): compare counts across regions.
@@ -212,7 +286,47 @@ class CNFEncoder:
             CNF clauses.
         """
         # TODO: Implement COMPARE encoding
-        raise NotImplementedError("TODO: Implement encode_compare()")
+        if clue.region_b is None:
+            raise ValueError("CompareClue requires region_b.")
+        
+        ops = {
+            ">":  lambda a, b: a > b,
+            "<":  lambda a, b: a < b,
+            ">=": lambda a, b: a >= b,
+            "<=": lambda a, b: a <= b,
+            "==": lambda a, b: a == b,
+            "!=": lambda a, b: a != b,
+        }
+        if clue.operator not in ops:
+            raise ValueError("Unknown comparison operator")
+        cmp_fn = ops[clue.operator]
+        vars_a = self._vars_for_region(clue.region)
+        vars_b = self._vars_for_region(clue.region_b)
+        pairs = [
+            (ka, kb)
+            for ka in range(len(vars_a) + 1)
+            for kb in range(len(vars_b) + 1)
+            if cmp_fn(ka, kb)
+        ]
+
+        if not pairs:
+            return [[]]
+        
+        clauses: CNF = []
+        selectors: List[int] = []
+
+        for ka, kb in pairs:
+            s = self._new_aux_var()
+            selectors.append(s)
+            pair_clauses = (
+                self._encode_exactly_vars(vars_a, ka)
+                + self._encode_exactly_vars(vars_b, kb)
+            )
+            for clause in pair_clauses:
+                clauses.append([-s] + clause)
+
+        clauses.append(selectors)
+        return clauses
 
     # ------------------------------------------------------------------
     # Helpers
@@ -228,7 +342,8 @@ class CNFEncoder:
             Sorted list of positive integer variables.
         """
         # TODO: Use self.grid.get_region() and self.variable_map
-        raise NotImplementedError("TODO: Implement _get_vars_for_region()")
+        cells = self.grid.get_region(clue.region)
+        return sorted(self.variable_map.get_var(cell.cell_id) for cell in cells)
 
     def _new_aux_var(self) -> int:
         """Allocate and return a fresh auxiliary variable."""

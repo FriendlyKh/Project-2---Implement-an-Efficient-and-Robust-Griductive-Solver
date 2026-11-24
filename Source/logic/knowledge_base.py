@@ -19,6 +19,7 @@ Structure of KB at time *t*:
 """
 
 from __future__ import annotations
+import copy
 
 from typing import Dict, List, Optional, Tuple
 
@@ -66,7 +67,12 @@ class KnowledgeBase:
         #   2. Append new clauses to self._clauses
         #   3. Record origin in self._clue_origins
         #   4. Return count of new clauses
-        raise NotImplementedError("TODO: Implement KnowledgeBase.add_clue()")
+        clauses = self.encoder.encode_clue(clue)
+        for clause in clauses:
+            index = len(self._clauses)
+            self._clauses.append(clause)
+            self._clue_origins[index] = clue
+        return len(clauses)
 
     def add_verdict(self, cell_id: str, is_criminal: bool) -> None:
         """Add a unit clause asserting the proven verdict for *cell_id*.
@@ -81,7 +87,10 @@ class KnowledgeBase:
         #   1. Look up variable via self.variable_map
         #   2. Create unit clause [+var] or [-var]
         #   3. Append to both self._clauses and self._verdict_clauses
-        raise NotImplementedError("TODO: Implement KnowledgeBase.add_verdict()")
+        var = self.variable_map.get_var(cell_id)
+        clause = [+var] if is_criminal else [-var]
+        self._clauses.append(clause)
+        self._verdict_clauses.append(clause)
 
     # ------------------------------------------------------------------
     # Queries
@@ -94,7 +103,7 @@ class KnowledgeBase:
             List of clauses (each clause is a list of signed ints).
         """
         # TODO: Return a shallow copy of self._clauses
-        raise NotImplementedError("TODO: Implement KnowledgeBase.get_clauses()")
+        return copy.copy(self._clauses)
 
     def get_stats(self) -> Dict[str, int]:
         """Return statistics about the current KB.
@@ -108,7 +117,13 @@ class KnowledgeBase:
             * ``num_aux_vars``: auxiliary variables introduced
         """
         # TODO: Compute and return stats
-        raise NotImplementedError("TODO: Implement KnowledgeBase.get_stats()")
+        return {
+            "num_vars": self.encoder.total_vars,
+            "num_clauses": len(self._clauses),
+            "num_clue_clauses": len(self._clue_origins),
+            "num_verdict_clauses": len(self._verdict_clauses),
+            "num_aux_vars": self.encoder.aux_var_count,
+        }
 
     def __repr__(self) -> str:
         return (
