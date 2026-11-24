@@ -7,6 +7,7 @@ Provides a modern web-based graphical interface for Griductive Solver.
 
 Endpoints:
 * ``GET  /``               — Main game page.
+* ``GET  /api/puzzles``    — List available puzzle JSON files.
 * ``GET  /api/state``      — Current public board state.
 * ``POST /api/load``       — Load a puzzle JSON file.
 * ``POST /api/restart``    — Restart the current puzzle.
@@ -20,15 +21,14 @@ Endpoints:
 from __future__ import annotations
 
 import os
-from pathlib import Path
-from typing import Any, Dict
+from typing import Optional
 
 from flask import Flask, jsonify, render_template, request
 
 from gui.controls import GameController
 
 
-def create_app(controller: GameController | None = None) -> Flask:
+def create_app(controller: Optional[GameController] = None) -> Flask:
     """Create and configure the Flask application.
 
     Args:
@@ -49,60 +49,82 @@ def create_app(controller: GameController | None = None) -> Flask:
         """Render main interactive interface."""
         return render_template("index.html")
 
+    @app.route("/api/puzzles", methods=["GET"])
+    def list_puzzles():
+        """Return available puzzle files."""
+        return jsonify({"status": "ok", "puzzles": ctrl.list_available_puzzles()})
+
     @app.route("/api/state", methods=["GET"])
     def get_state():
         """Retrieve current public game board state."""
-        # TODO: Return serialized public state via ctrl.board_view
-        return jsonify({"status": "ok", "message": "TODO: implement state endpoint"})
+        return jsonify(ctrl.get_state())
 
     @app.route("/api/load", methods=["POST"])
     def load():
         """Load a selected puzzle file."""
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         puzzle_path = data.get("puzzle_path", "")
-        # TODO: Call ctrl.load_puzzle(puzzle_path)
-        return jsonify({"status": "ok", "message": f"TODO: load {puzzle_path}"})
+        if not puzzle_path:
+            return jsonify({"status": "error", "message": "Missing 'puzzle_path'"}), 400
+        try:
+            return jsonify(ctrl.load_puzzle(puzzle_path))
+        except FileNotFoundError as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 404
+        except ValueError as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     @app.route("/api/restart", methods=["POST"])
     def restart():
         """Restart puzzle to initial state."""
-        # TODO: Call ctrl.restart()
-        return jsonify({"status": "ok", "message": "TODO: restart"})
+        try:
+            return jsonify(ctrl.restart())
+        except RuntimeError as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     @app.route("/api/verdict", methods=["POST"])
     def verdict():
         """Submit a user verdict."""
-        data = request.get_json() or {}
+        data = request.get_json(silent=True) or {}
         cell_id = data.get("cell_id")
         call = data.get("verdict")  # 'CRIMINAL' or 'INNOCENT'
-        # TODO: Call ctrl.submit_verdict(cell_id, call)
-        return jsonify({"status": "ok", "message": f"TODO: submit {call} for {cell_id}"})
+        try:
+            return jsonify(ctrl.submit_verdict(cell_id, call))
+        except (ValueError, RuntimeError) as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     @app.route("/api/hint", methods=["GET"])
     def hint():
-        """Request a hint."""
-        # TODO: Call ctrl.get_hint()
-        return jsonify({"status": "ok", "message": "TODO: hint"})
+        """Request a deductive hint."""
+        try:
+            return jsonify(ctrl.get_hint())
+        except RuntimeError as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     @app.route("/api/step", methods=["POST"])
     def step():
         """Execute one auto-solve step."""
-        # TODO: Call ctrl.auto_solve_step()
-        return jsonify({"status": "ok", "message": "TODO: step"})
+        try:
+            return jsonify(ctrl.auto_solve_step())
+        except RuntimeError as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     @app.route("/api/auto", methods=["POST"])
     def auto_solve():
         """Execute complete auto-solve."""
-        # TODO: Call ctrl.auto_solve_all()
-        return jsonify({"status": "ok", "message": "TODO: auto"})
+        try:
+            return jsonify(ctrl.auto_solve_all())
+        except RuntimeError as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     @app.route("/api/highlight", methods=["POST"])
     def highlight():
-        """Compute highlighted cells for a selected clue."""
-        data = request.get_json() or {}
-        clue_id = data.get("clue_id")
-        # TODO: Use ClueHighlighter to return list of cell IDs
-        return jsonify({"cells": []})
+        """Compute highlighted cells for a selected revealed clue."""
+        data = request.get_json(silent=True) or {}
+        cell_id = data.get("cell_id") or data.get("clue_id")
+        try:
+            return jsonify(ctrl.highlight_clue(cell_id))
+        except (ValueError, RuntimeError) as exc:
+            return jsonify({"status": "error", "message": str(exc)}), 400
 
     return app
 

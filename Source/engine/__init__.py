@@ -2,7 +2,7 @@
 """engine — Game engine that owns the hidden solution and manages game state."""
 
 from engine.game_engine import GameEngine
-from engine.puzzle_loader import PuzzleLoader
+from engine.puzzle_loader import PuzzleLoader, load_puzzle
 from engine.verdict import Verdict
 
-__all__ = ["GameEngine", "PuzzleLoader", "Verdict"]
+__all__ = ["GameEngine", "PuzzleLoader", "load_puzzle", "Verdict"]

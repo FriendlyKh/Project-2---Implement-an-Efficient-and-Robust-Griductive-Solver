@@ -4,6 +4,7 @@
 from models.cell import Cell
 from models.clue import (
     Clue,
+    Region,
     FactClue,
     SameClue,
     DifferentClue,
@@ -19,6 +20,7 @@ from models.puzzle import Puzzle
 __all__ = [
     "Cell",
     "Clue",
+    "Region",
     "FactClue",
     "SameClue",
     "DifferentClue",

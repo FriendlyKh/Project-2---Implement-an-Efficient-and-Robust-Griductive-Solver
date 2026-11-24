@@ -3,166 +3,398 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Griductive Solver — Interactive GUI</title>
+    <title>Griductive Solver — Interactive Deduction Board</title>
     <style>
         :root {
-            --bg-color: #0f111a;
-            --card-bg: #1a1e2e;
-            --card-border: #2a3147;
+            --bg-color: #0b0e17;
+            --surface: #131826;
+            --card-bg: #1b2236;
+            --card-revealed-bg: #161c2d;
+            --card-border: #2a3450;
             --criminal: #ff5252;
+            --criminal-soft: rgba(255, 82, 82, 0.14);
             --innocent: #00e676;
-            --unknown: #607d8b;
+            --innocent-soft: rgba(0, 230, 118, 0.14);
+            --warning: #ffb74d;
+            --warning-soft: rgba(255, 183, 77, 0.14);
             --accent: #64ffda;
-            --text-main: #eceff1;
-            --text-dim: #90a4ae;
-            --highlight: #ffd700;
+            --accent-soft: rgba(100, 255, 218, 0.12);
+            --highlight: #ffd740;
+            --text-main: #edf2f7;
+            --text-dim: #94a3b8;
         }
 
         * {
             box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Inter, sans-serif;
         }
 
         body {
-            background-color: var(--bg-color);
+            background: radial-gradient(circle at top left, #131b2e 0%, var(--bg-color) 55%);
             color: var(--text-main);
             min-height: 100vh;
             display: flex;
             flex-direction: column;
-            padding: 24px;
+            padding: 20px 24px;
+            gap: 18px;
         }
 
+        /* Header & Controls */
         header {
             display: flex;
+            flex-wrap: wrap;
             justify-content: space-between;
             align-items: center;
-            padding-bottom: 20px;
+            gap: 14px;
+            padding-bottom: 16px;
             border-bottom: 1px solid var(--card-border);
-            margin-bottom: 24px;
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-icon {
+            font-size: 28px;
+            line-height: 1;
         }
 
         h1 {
-            font-size: 26px;
-            font-weight: 700;
-            letter-spacing: -0.5px;
+            font-size: 24px;
+            font-weight: 800;
+            letter-spacing: -0.4px;
         }
 
         h1 span {
             color: var(--accent);
         }
 
+        .subtitle {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 2px;
+        }
+
         .controls {
             display: flex;
-            gap: 12px;
+            flex-wrap: wrap;
+            gap: 8px;
             align-items: center;
         }
 
-        button {
-            background: #23293e;
+        select {
+            background: #1d253b;
             color: var(--text-main);
             border: 1px solid var(--card-border);
             border-radius: 8px;
-            padding: 8px 16px;
-            font-size: 14px;
-            font-weight: 600;
+            padding: 8px 12px;
+            font-size: 13px;
+            font-weight: 500;
             cursor: pointer;
-            transition: all 0.2s ease;
+            outline: none;
         }
 
-        button:hover {
+        select:focus {
+            border-color: var(--accent);
+        }
+
+        button {
+            background: #1e263d;
+            color: var(--text-main);
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.18s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        button:hover:not(:disabled) {
             border-color: var(--accent);
             color: var(--accent);
             transform: translateY(-1px);
         }
 
+        button:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+        }
+
         button.primary {
             background: var(--accent);
-            color: #0a192f;
+            color: #081523;
             border-color: var(--accent);
         }
 
-        button.primary:hover {
-            background: #4cd3b0;
+        button.primary:hover:not(:disabled) {
+            background: #4ce7c2;
+            color: #081523;
         }
 
+        button.danger {
+            border-color: var(--criminal);
+            color: var(--criminal);
+            background: var(--criminal-soft);
+        }
+
+        button.danger:hover:not(:disabled) {
+            background: rgba(255, 82, 82, 0.24);
+            border-color: var(--criminal);
+            color: #ff8a80;
+        }
+
+        button.safe {
+            border-color: var(--innocent);
+            color: var(--innocent);
+            background: var(--innocent-soft);
+        }
+
+        button.safe:hover:not(:disabled) {
+            background: rgba(0, 230, 118, 0.24);
+            border-color: var(--innocent);
+            color: #69f0ae;
+        }
+
+        /* Main Layout */
         .main-container {
             display: grid;
-            grid-template-columns: 1fr 340px;
-            gap: 28px;
+            grid-template-columns: minmax(0, 1fr) 360px;
+            gap: 22px;
             flex: 1;
+            align-items: start;
         }
 
-        /* Board layout */
+        @media (max-width: 1024px) {
+            .main-container {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Board Panel */
         .board-wrapper {
+            background: var(--surface);
+            border-radius: 14px;
+            border: 1px solid var(--card-border);
+            padding: 20px 24px 26px;
             display: flex;
             flex-direction: column;
             align-items: center;
-            justify-content: center;
-            background: #141724;
-            border-radius: 12px;
-            border: 1px solid var(--card-border);
-            padding: 30px;
+            gap: 16px;
+            min-height: 540px;
         }
 
-        .grid-container {
-            display: grid;
-            gap: 12px;
-            margin-top: 20px;
-        }
-
-        .cell-card {
-            width: 130px;
-            height: 150px;
-            background: var(--card-bg);
-            border: 2px solid var(--card-border);
+        .status-banner {
+            width: 100%;
+            padding: 11px 15px;
             border-radius: 10px;
+            font-size: 13px;
+            line-height: 1.45;
+            border: 1px solid var(--card-border);
+            background: rgba(255, 255, 255, 0.03);
+            color: var(--text-dim);
             display: flex;
-            flex-direction: column;
-            padding: 10px;
-            position: relative;
-            cursor: pointer;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
             transition: all 0.2s ease;
         }
 
-        .cell-card:hover {
-            border-color: var(--accent);
-            transform: translateY(-2px);
-        }
-
-        .cell-card.highlighted {
-            border-color: var(--highlight) !important;
-            box-shadow: 0 0 12px rgba(255, 215, 0, 0.4);
-        }
-
-        .cell-card.criminal {
-            border-color: var(--criminal);
-            background: rgba(255, 82, 82, 0.08);
-        }
-
-        .cell-card.innocent {
+        .status-banner.accepted,
+        .status-banner.solved {
             border-color: var(--innocent);
-            background: rgba(0, 230, 118, 0.08);
+            background: var(--innocent-soft);
+            color: #b9f6ca;
+        }
+
+        .status-banner.warning {
+            border-color: var(--warning);
+            background: var(--warning-soft);
+            color: #ffe0b2;
+        }
+
+        .status-banner.error {
+            border-color: var(--criminal);
+            background: var(--criminal-soft);
+            color: #ffcdd2;
+        }
+
+        .status-banner.hint {
+            border-color: var(--accent);
+            background: var(--accent-soft);
+            color: #c7fff1;
+        }
+
+        .highlight-bar {
+            width: 100%;
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            gap: 10px;
+            padding: 8px 14px;
+            border-radius: 8px;
+            background: rgba(255, 215, 64, 0.12);
+            border: 1px solid rgba(255, 215, 64, 0.55);
+            color: #ffe57f;
+            font-size: 12px;
+        }
+
+        .highlight-bar.visible {
+            display: flex;
+        }
+
+        /* Coordinate Grid */
+        .coord-grid {
+            display: grid;
+            gap: 10px;
+            align-items: center;
+            justify-items: center;
+            width: 100%;
+            max-width: 820px;
+        }
+
+        .coord-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: var(--accent);
+            letter-spacing: 0.5px;
+            user-select: none;
+        }
+
+        .coord-corner {
+            width: 28px;
+            height: 24px;
+        }
+
+        /* 3D Flip Card */
+        .card-scene {
+            width: 100%;
+            min-width: 112px;
+            max-width: 162px;
+            height: var(--card-height, 174px);
+            perspective: 950px;
+            cursor: pointer;
+        }
+
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            transform-style: preserve-3d;
+            transition: transform 0.58s cubic-bezier(0.22, 1, 0.36, 1);
+        }
+
+        .card-scene.is-revealed .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card-face {
+            position: absolute;
+            inset: 0;
+            backface-visibility: hidden;
+            -webkit-backface-visibility: hidden;
+            border-radius: 12px;
+            border: 2px solid var(--card-border);
+            padding: 9px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transition: border-color 0.2s ease, box-shadow 0.2s ease, background 0.2s ease;
+        }
+
+        .card-front {
+            background: linear-gradient(160deg, #1f2842 0%, var(--card-bg) 100%);
+        }
+
+        .card-back {
+            transform: rotateY(180deg);
+            background: var(--card-revealed-bg);
+        }
+
+        .card-scene:hover .card-face {
+            border-color: var(--accent);
+        }
+
+        .card-scene.selected .card-face {
+            border-color: var(--accent);
+            box-shadow: 0 0 0 2px rgba(100, 255, 218, 0.35), 0 6px 18px rgba(0, 0, 0, 0.35);
+        }
+
+        .card-scene.criminal .card-back {
+            border-color: var(--criminal);
+            background: linear-gradient(180deg, rgba(255, 82, 82, 0.14) 0%, #1a1523 100%);
+        }
+
+        .card-scene.innocent .card-back {
+            border-color: var(--innocent);
+            background: linear-gradient(180deg, rgba(0, 230, 118, 0.12) 0%, #122223 100%);
+        }
+
+        .card-scene.highlighted .card-face {
+            border-color: var(--highlight) !important;
+            box-shadow: 0 0 18px rgba(255, 215, 64, 0.45), inset 0 0 10px rgba(255, 215, 64, 0.12);
+        }
+
+        .card-scene.hint-target .card-face {
+            animation: pulseHint 1.4s ease-in-out infinite;
+        }
+
+        @keyframes pulseHint {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.55); }
+            50% { box-shadow: 0 0 18px 4px rgba(100, 255, 218, 0.45); }
         }
 
         .cell-header {
             display: flex;
             justify-content: space-between;
-            font-size: 12px;
-            font-weight: 700;
+            align-items: center;
+            gap: 4px;
+            font-size: 11px;
+            font-weight: 800;
             color: var(--text-dim);
         }
 
+        .status-pill {
+            font-size: 9px;
+            font-weight: 800;
+            padding: 2px 6px;
+            border-radius: 999px;
+            letter-spacing: 0.4px;
+            text-transform: uppercase;
+        }
+
+        .pill-unknown {
+            background: rgba(148, 163, 184, 0.16);
+            color: #cbd5e1;
+        }
+
+        .pill-criminal {
+            background: rgba(255, 82, 82, 0.25);
+            color: #ff8a80;
+        }
+
+        .pill-innocent {
+            background: rgba(0, 230, 118, 0.22);
+            color: #69f0ae;
+        }
+
         .avatar {
-            font-size: 32px;
+            font-size: var(--avatar-size, 32px);
             text-align: center;
-            margin: 6px 0;
+            margin: 5px 0 3px;
+            line-height: 1.1;
         }
 
         .char-name {
             font-size: 13px;
-            font-weight: 600;
+            font-weight: 700;
             text-align: center;
             white-space: nowrap;
             overflow: hidden;
@@ -173,170 +405,863 @@
             font-size: 11px;
             color: var(--text-dim);
             text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .hidden-hint {
+            margin-top: auto;
+            font-size: 10px;
+            color: #64748b;
+            text-align: center;
+            padding: 4px;
+            border-top: 1px dashed rgba(148, 163, 184, 0.18);
         }
 
         .clue-box {
             margin-top: auto;
-            font-size: 10px;
-            line-height: 1.2;
-            background: rgba(0,0,0,0.3);
-            padding: 4px;
-            border-radius: 4px;
-            color: var(--accent);
+            font-size: 10.5px;
+            line-height: 1.28;
+            background: rgba(8, 12, 22, 0.62);
+            border: 1px solid rgba(100, 255, 218, 0.22);
+            padding: 5px 6px;
+            border-radius: 6px;
+            color: #d7fff4;
+            cursor: pointer;
+            transition: all 0.15s ease;
+            overflow: hidden;
+            display: -webkit-box;
+            -webkit-line-clamp: 3;
+            -webkit-box-orient: vertical;
+        }
+
+        .clue-box:hover {
+            border-color: var(--highlight);
+            background: rgba(255, 215, 64, 0.14);
+            color: #fff8dc;
+        }
+
+        .clue-box.active-clue {
+            border-color: var(--highlight);
+            background: rgba(255, 215, 64, 0.2);
+            color: #fffde7;
         }
 
         /* Sidebar */
         .sidebar {
             display: flex;
             flex-direction: column;
-            gap: 20px;
+            gap: 16px;
         }
 
         .panel {
-            background: #141724;
+            background: var(--surface);
             border: 1px solid var(--card-border);
-            border-radius: 12px;
-            padding: 18px;
+            border-radius: 14px;
+            padding: 16px;
         }
 
         .panel-title {
-            font-size: 15px;
-            font-weight: 700;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.7px;
             margin-bottom: 12px;
             color: var(--accent);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
 
-        .status-badge {
-            display: inline-block;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 11px;
+        .progress-track {
+            width: 100%;
+            height: 8px;
+            background: #0c101b;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            width: 0%;
+            background: linear-gradient(90deg, var(--accent), var(--innocent));
+            transition: width 0.35s ease;
+        }
+
+        .stats-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .stats-row strong {
+            color: var(--text-main);
+        }
+
+        .suspect-card {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(255, 255, 255, 0.03);
+            border: 1px solid var(--card-border);
+        }
+
+        .suspect-avatar {
+            font-size: 34px;
+            width: 48px;
+            height: 48px;
+            display: grid;
+            place-items: center;
+            border-radius: 10px;
+            background: rgba(100, 255, 218, 0.08);
+        }
+
+        .suspect-meta h3 {
+            font-size: 15px;
+            margin-bottom: 2px;
+        }
+
+        .suspect-meta p {
+            font-size: 12px;
+            color: var(--text-dim);
+        }
+
+        .action-buttons {
+            display: none;
+            margin-top: 12px;
+            gap: 8px;
+        }
+
+        .action-buttons.visible {
+            display: flex;
+        }
+
+        .action-buttons button {
+            flex: 1;
+            justify-content: center;
+            padding: 10px 12px;
+        }
+
+        .clue-list {
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            max-height: 175px;
+            overflow-y: auto;
+        }
+
+        .clue-list-item {
+            background: #0d1220;
+            border: 1px solid var(--card-border);
+            border-radius: 8px;
+            padding: 7px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+
+        .clue-list-item:hover {
+            border-color: var(--highlight);
+        }
+
+        .clue-list-item.active {
+            border-color: var(--highlight);
+            background: rgba(255, 215, 64, 0.12);
+        }
+
+        .clue-list-item .clue-origin {
             font-weight: 700;
-            text-transform: uppercase;
+            color: var(--accent);
+            margin-right: 6px;
         }
-
-        .badge-criminal { background: rgba(255,82,82,0.2); color: var(--criminal); }
-        .badge-innocent { background: rgba(0,230,118,0.2); color: var(--innocent); }
 
         .log-box {
-            background: #0a0d16;
-            border-radius: 6px;
+            background: #090c14;
+            border: 1px solid #1e273d;
+            border-radius: 8px;
             padding: 10px;
-            font-family: monospace;
-            font-size: 12px;
-            max-height: 250px;
+            font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+            font-size: 11.5px;
+            line-height: 1.45;
+            max-height: 220px;
             overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .log-entry {
+            padding: 4px 6px;
+            border-radius: 4px;
+            border-left: 3px solid #334155;
             color: var(--text-dim);
+        }
+
+        .log-entry.accepted,
+        .log-entry.auto {
+            border-left-color: var(--innocent);
+            color: #d1fae5;
+            background: rgba(0, 230, 118, 0.06);
+        }
+
+        .log-entry.solved {
+            border-left-color: var(--accent);
+            color: var(--accent);
+            font-weight: 700;
+            background: rgba(100, 255, 218, 0.08);
+        }
+
+        .log-entry.warning {
+            border-left-color: var(--warning);
+            color: #ffe0b2;
+            background: rgba(255, 183, 77, 0.06);
+        }
+
+        .log-entry.error {
+            border-left-color: var(--criminal);
+            color: #ffcdd2;
+            background: rgba(255, 82, 82, 0.07);
+        }
+
+        .log-entry.hint {
+            border-left-color: var(--highlight);
+            color: #fff3c4;
+            background: rgba(255, 215, 64, 0.07);
+        }
+
+        .kbd-tip {
+            font-size: 11px;
+            color: #64748b;
+            margin-top: 8px;
+        }
+
+        kbd {
+            background: #1e263d;
+            border: 1px solid var(--card-border);
+            border-radius: 4px;
+            padding: 1px 5px;
+            font-size: 10px;
+            color: var(--text-main);
         }
     </style>
 </head>
 <body>
     <header>
-        <h1>Griductive <span>Solver</span></h1>
+        <div class="brand">
+            <div class="brand-icon">🕵️</div>
+            <div>
+                <h1>Griductive <span>Solver</span></h1>
+                <div class="subtitle">No-Guess Propositional Logic Deduction • Strict State Isolation</div>
+            </div>
+        </div>
         <div class="controls">
-            <select id="puzzleSelect" style="background: #23293e; color: #fff; padding: 8px; border-radius: 6px; border: 1px solid var(--card-border);">
-                <option value="puzzles/3x3/puzzle_01.json">3×3 Puzzle #1</option>
-                <option value="puzzles/3x3/puzzle_02.json">3×3 Puzzle #2</option>
-                <option value="puzzles/4x4/puzzle_01.json">4×4 Puzzle #1</option>
-                <option value="puzzles/5x5/puzzle_01.json">5×5 Stress Test</option>
-            </select>
-            <button onclick="loadSelectedPuzzle()">Load</button>
-            <button onclick="restartPuzzle()">Restart</button>
-            <button onclick="requestHint()">💡 Hint</button>
-            <button class="primary" onclick="autoSolveStep()">Step</button>
-            <button class="primary" onclick="autoSolveAll()">⚡ Auto Solve</button>
+            <select id="puzzleSelect" aria-label="Select puzzle"></select>
+            <button id="btnLoad" onclick="loadSelectedPuzzle()">📂 Load</button>
+            <button id="btnRestart" onclick="restartPuzzle()">↺ Restart</button>
+            <button id="btnHint" onclick="requestHint()">💡 Hint</button>
+            <button id="btnStep" class="primary" onclick="autoSolveStep()">▶ Step</button>
+            <button id="btnAuto" class="primary" onclick="autoSolveAnimated()">⚡ Auto Solve</button>
         </div>
     </header>
 
     <div class="main-container">
         <div class="board-wrapper">
-            <div id="boardMessage" style="color: var(--text-dim); margin-bottom: 10px;">Select a card to make a deduction or click a clue to highlight affected cells.</div>
-            <div class="grid-container" id="gridContainer">
-                <!-- Rendered dynamically -->
+            <div id="statusBanner" class="status-banner">
+                <span id="statusText">Loading puzzle...</span>
+            </div>
+
+            <div id="highlightBar" class="highlight-bar">
+                <span id="highlightText"></span>
+                <button style="padding: 4px 10px; font-size: 11px;" onclick="clearHighlight()">Clear Highlight</button>
+            </div>
+
+            <div class="coord-grid" id="gridContainer">
+                <!-- Dynamically rendered coordinate grid -->
             </div>
         </div>
 
-        <div class="sidebar">
+        <aside class="sidebar">
+            <div class="panel">
+                <div class="panel-title">
+                    <span>Case Progress</span>
+                    <span id="progressLabel">0 / 0</span>
+                </div>
+                <div class="stats-row">
+                    <span>Resolved: <strong id="resolvedCount">0</strong></span>
+                    <span>Remaining: <strong id="remainingCount">0</strong></span>
+                </div>
+                <div class="progress-track">
+                    <div class="progress-fill" id="progressFill"></div>
+                </div>
+            </div>
+
             <div class="panel">
                 <div class="panel-title">Selected Suspect</div>
                 <div id="selectedInfo">
-                    <p style="color: var(--text-dim); font-size: 13px;">Click a card on the grid to inspect details and submit a verdict.</p>
+                    <p style="color: var(--text-dim); font-size: 12.5px;">
+                        Click any unrevealed card on the grid to inspect the suspect and submit a logically proven verdict.
+                    </p>
                 </div>
-                <div id="actionButtons" style="display: none; margin-top: 14px; gap: 8px;">
-                    <button style="border-color: var(--criminal); color: var(--criminal); flex: 1;" onclick="submitVerdict('CRIMINAL')">Call Criminal</button>
-                    <button style="border-color: var(--innocent); color: var(--innocent); flex: 1;" onclick="submitVerdict('INNOCENT')">Call Innocent</button>
+                <div id="actionButtons" class="action-buttons">
+                    <button class="danger" onclick="submitVerdict('CRIMINAL')">🚨 Criminal</button>
+                    <button class="safe" onclick="submitVerdict('INNOCENT')">✅ Innocent</button>
+                </div>
+                <div id="kbdTip" class="kbd-tip" style="display: none;">
+                    Shortcuts: <kbd>C</kbd> Criminal · <kbd>I</kbd> Innocent · <kbd>Esc</kbd> Clear
+                </div>
+            </div>
+
+            <div class="panel">
+                <div class="panel-title">
+                    <span>Revealed Clues</span>
+                    <span style="font-size: 11px; color: var(--text-dim); text-transform: none; font-weight: 500;">Click to highlight</span>
+                </div>
+                <div class="clue-list" id="clueList">
+                    <div style="color: var(--text-dim); font-size: 12px;">No clues revealed yet.</div>
                 </div>
             </div>
 
             <div class="panel">
                 <div class="panel-title">Deduction Trace</div>
                 <div class="log-box" id="traceBox">
-                    <div>[0] System ready. Awaiting puzzle load.</div>
+                    <div class="log-entry">[0] System ready.</div>
                 </div>
             </div>
-        </div>
+        </aside>
     </div>
 
     <script>
-        let currentCell = null;
+        let boardState = null;
+        let selectedCellId = null;
+        let activeHighlightSource = null;
+        let hintTargetCell = null;
+        let autoRunning = false;
 
-        function logTrace(msg) {
+        function setBanner(text, kind = '') {
+            const banner = document.getElementById('statusBanner');
+            const label = document.getElementById('statusText');
+            banner.className = 'status-banner' + (kind ? ` ${kind}` : '');
+            label.textContent = text;
+        }
+
+        function setControlsDisabled(disabled) {
+            for (const id of ['btnLoad', 'btnRestart', 'btnHint', 'btnStep', 'puzzleSelect']) {
+                document.getElementById(id).disabled = disabled;
+            }
+        }
+
+        function renderTrace(traceList) {
             const box = document.getElementById('traceBox');
-            const entry = document.createElement('div');
-            entry.textContent = msg;
-            box.appendChild(entry);
+            box.innerHTML = '';
+            if (!traceList || traceList.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'log-entry';
+                empty.textContent = '[0] Awaiting action.';
+                box.appendChild(empty);
+                return;
+            }
+            for (const item of traceList) {
+                const div = document.createElement('div');
+                div.className = `log-entry ${item.kind || ''}`;
+                div.textContent = item.message;
+                box.appendChild(div);
+            }
             box.scrollTop = box.scrollHeight;
         }
 
-        async function loadSelectedPuzzle() {
-            const path = document.getElementById('puzzleSelect').value;
-            logTrace(`Loading ${path}...`);
-            const res = await fetch('/api/load', {
+        function renderProgress(board) {
+            const resolved = board.resolved_count || 0;
+            const total = board.total_cells || 0;
+            const pct = total > 0 ? Math.round((resolved / total) * 100) : 0;
+            document.getElementById('progressLabel').textContent = `${resolved} / ${total}`;
+            document.getElementById('resolvedCount').textContent = resolved;
+            document.getElementById('remainingCount').textContent = Math.max(0, total - resolved);
+            document.getElementById('progressFill').style.width = `${pct}%`;
+        }
+
+        function renderClueList(board) {
+            const list = document.getElementById('clueList');
+            list.innerHTML = '';
+            const revealed = board.cells.filter(c => c.is_revealed && c.clue_text);
+            if (revealed.length === 0) {
+                list.innerHTML = '<div style="color: var(--text-dim); font-size: 12px;">No clues revealed yet.</div>';
+                return;
+            }
+            for (const cell of revealed) {
+                const item = document.createElement('div');
+                item.className = 'clue-list-item' + (activeHighlightSource === cell.id ? ' active' : '');
+                item.onclick = () => toggleHighlight(cell.id);
+                const origin = document.createElement('span');
+                origin.className = 'clue-origin';
+                origin.textContent = `${cell.id} (${cell.name}):`;
+                const text = document.createElement('span');
+                text.textContent = cell.clue_text;
+                item.appendChild(origin);
+                item.appendChild(text);
+                list.appendChild(item);
+            }
+        }
+
+        function renderSelectedInspector() {
+            const info = document.getElementById('selectedInfo');
+            const actions = document.getElementById('actionButtons');
+            const kbdTip = document.getElementById('kbdTip');
+
+            if (!boardState || !selectedCellId) {
+                info.innerHTML = '<p style="color: var(--text-dim); font-size: 12.5px;">Click any card on the grid to inspect details, submit a verdict, or highlight its clue.</p>';
+                actions.classList.remove('visible');
+                kbdTip.style.display = 'none';
+                return;
+            }
+
+            const cell = boardState.cells.find(c => c.id === selectedCellId);
+            if (!cell) {
+                selectedCellId = null;
+                renderSelectedInspector();
+                return;
+            }
+
+            const statusBadge = cell.is_revealed
+                ? `<span class="status-pill ${cell.status === 'CRIMINAL' ? 'pill-criminal' : 'pill-innocent'}">${cell.status}</span>`
+                : `<span class="status-pill pill-unknown">Unresolved</span>`;
+
+            let clueSection = '';
+            if (cell.is_revealed && cell.clue_text) {
+                clueSection = `
+                    <div style="margin-top: 10px; padding: 9px 10px; border-radius: 8px; background: #0c111e; border: 1px solid rgba(100,255,218,0.25); font-size: 12px; color: #d7fff4;">
+                        <div style="font-size: 10px; text-transform: uppercase; color: var(--accent); margin-bottom: 4px; font-weight: 700;">Revealed Clue (${cell.clue_type || 'CLUE'})</div>
+                        <div>${escapeHtml(cell.clue_text)}</div>
+                    </div>
+                    <button style="margin-top: 10px; width: 100%; justify-content: center;" onclick="toggleHighlight('${cell.id}')">
+                        ${activeHighlightSource === cell.id ? '✕ Clear Clue Highlight' : '✨ Highlight Referenced Cells'}
+                    </button>
+                `;
+            }
+
+            info.innerHTML = `
+                <div class="suspect-card">
+                    <div class="suspect-avatar">${cell.avatar}</div>
+                    <div class="suspect-meta">
+                        <h3>${escapeHtml(cell.name)} <span style="color: var(--accent); font-size: 13px;">[${cell.id}]</span></h3>
+                        <p>${escapeHtml(cell.profession)} &nbsp; ${statusBadge}</p>
+                    </div>
+                </div>
+                ${clueSection}
+            `;
+
+            if (!cell.is_revealed) {
+                actions.classList.add('visible');
+                kbdTip.style.display = 'block';
+            } else {
+                actions.classList.remove('visible');
+                kbdTip.style.display = 'none';
+            }
+        }
+
+        function escapeHtml(str) {
+            return String(str ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function buildCardElement(cell) {
+            const scene = document.createElement('div');
+            scene.className = 'card-scene';
+            scene.dataset.cellId = cell.id;
+            scene.onclick = () => selectCell(cell.id);
+
+            const inner = document.createElement('div');
+            inner.className = 'card-inner';
+
+            // Front face (face-down / unrevealed)
+            const front = document.createElement('div');
+            front.className = 'card-face card-front';
+            front.innerHTML = `
+                <div class="cell-header">
+                    <span>${cell.id}</span>
+                    <span class="status-pill pill-unknown">?</span>
+                </div>
+                <div class="avatar">${cell.avatar}</div>
+                <div class="char-name" title="${escapeHtml(cell.name)}">${escapeHtml(cell.name)}</div>
+                <div class="char-role" title="${escapeHtml(cell.profession)}">${escapeHtml(cell.profession)}</div>
+                <div class="hidden-hint">Face-down • Click to inspect</div>
+            `;
+
+            // Back face (face-up / revealed)
+            const back = document.createElement('div');
+            back.className = 'card-face card-back';
+            back.innerHTML = `
+                <div class="cell-header">
+                    <span>${cell.id}</span>
+                    <span class="status-pill status-pill-back"></span>
+                </div>
+                <div class="avatar">${cell.avatar}</div>
+                <div class="char-name" title="${escapeHtml(cell.name)}">${escapeHtml(cell.name)}</div>
+                <div class="char-role" title="${escapeHtml(cell.profession)}">${escapeHtml(cell.profession)}</div>
+                <div class="clue-box" title="Click to highlight referenced cells"></div>
+            `;
+
+            const clueEl = back.querySelector('.clue-box');
+            clueEl.onclick = (evt) => {
+                evt.stopPropagation();
+                selectCell(cell.id);
+                toggleHighlight(cell.id);
+            };
+
+            inner.appendChild(front);
+            inner.appendChild(back);
+            scene.appendChild(inner);
+            return scene;
+        }
+
+        function updateCardElement(scene, cell) {
+            scene.classList.toggle('is-revealed', !!cell.is_revealed);
+            scene.classList.toggle('criminal', cell.is_revealed && cell.status === 'CRIMINAL');
+            scene.classList.toggle('innocent', cell.is_revealed && cell.status === 'INNOCENT');
+            scene.classList.toggle('selected', selectedCellId === cell.id);
+            scene.classList.toggle('highlighted', !!cell.is_highlighted);
+            scene.classList.toggle('hint-target', hintTargetCell === cell.id && !cell.is_revealed);
+
+            const pill = scene.querySelector('.status-pill-back');
+            if (cell.is_revealed && cell.status) {
+                pill.textContent = cell.status === 'CRIMINAL' ? 'CRIMINAL' : 'INNOCENT';
+                pill.className = 'status-pill status-pill-back ' + (cell.status === 'CRIMINAL' ? 'pill-criminal' : 'pill-innocent');
+            } else {
+                pill.textContent = '';
+                pill.className = 'status-pill status-pill-back';
+            }
+
+            const clueBox = scene.querySelector('.clue-box');
+            if (cell.is_revealed && cell.clue_text) {
+                clueBox.textContent = cell.clue_text;
+                clueBox.style.display = '-webkit-box';
+                clueBox.classList.toggle('active-clue', activeHighlightSource === cell.id);
+            } else {
+                clueBox.textContent = '';
+                clueBox.style.display = 'none';
+                clueBox.classList.remove('active-clue');
+            }
+        }
+
+        function renderBoard(board, forceRebuild = false) {
+            const container = document.getElementById('gridContainer');
+            const size = board.size;
+
+            // Adapt card height & avatar size smoothly for 3×3, 4×4, 5×5+
+            const cardHeight = size >= 5 ? 148 : (size === 4 ? 162 : 178);
+            const avatarSize = size >= 5 ? 24 : (size === 4 ? 28 : 34);
+            container.style.setProperty('--card-height', `${cardHeight}px`);
+            container.style.setProperty('--avatar-size', `${avatarSize}px`);
+            container.style.gridTemplateColumns = `28px repeat(${size}, minmax(0, 1fr))`;
+
+            const existingSize = Number(container.dataset.gridSize || 0);
+            const needRebuild = forceRebuild || existingSize !== size || container.querySelectorAll('.card-scene').length !== board.cells.length;
+
+            if (needRebuild) {
+                container.innerHTML = '';
+                container.dataset.gridSize = String(size);
+
+                // Top-left empty corner
+                const corner = document.createElement('div');
+                corner.className = 'coord-corner';
+                container.appendChild(corner);
+
+                // Column letters A, B, C...
+                for (const col of board.columns) {
+                    const colLbl = document.createElement('div');
+                    colLbl.className = 'coord-label';
+                    colLbl.textContent = col;
+                    container.appendChild(colLbl);
+                }
+
+                // Rows 1..N
+                for (const row of board.rows) {
+                    const rowLbl = document.createElement('div');
+                    rowLbl.className = 'coord-label';
+                    rowLbl.textContent = String(row);
+                    container.appendChild(rowLbl);
+
+                    for (const col of board.columns) {
+                        const cellId = `${col}${row}`;
+                        const cell = board.cells.find(c => c.id === cellId);
+                        const cardEl = buildCardElement(cell);
+                        container.appendChild(cardEl);
+                    }
+                }
+            }
+
+            // Update card states in-place so CSS 3D flip transitions animate smoothly!
+            for (const cell of board.cells) {
+                const scene = container.querySelector(`.card-scene[data-cell-id="${cell.id}"]`);
+                if (scene) {
+                    updateCardElement(scene, cell);
+                }
+            }
+
+            renderProgress(board);
+            renderClueList(board);
+            renderSelectedInspector();
+        }
+
+        function updateHighlightBar(sourceCell, cells, clueText) {
+            const bar = document.getElementById('highlightBar');
+            const txt = document.getElementById('highlightText');
+            if (sourceCell && cells && cells.length > 0) {
+                txt.textContent = `Highlighting clue from ${sourceCell}: "${clueText || ''}" → Cells: ${cells.join(', ')}`;
+                bar.classList.add('visible');
+            } else {
+                bar.classList.remove('visible');
+            }
+        }
+
+        function selectCell(cellId) {
+            selectedCellId = cellId;
+            if (boardState) {
+                renderBoard(boardState, false);
+            }
+        }
+
+        async function toggleHighlight(cellId) {
+            if (activeHighlightSource === cellId) {
+                await clearHighlight();
+                return;
+            }
+            const res = await fetch('/api/highlight', {
                 method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({puzzle_path: path})
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cell_id: cellId })
             });
             const data = await res.json();
-            logTrace(data.message || 'Puzzle loaded.');
+            if (data.status === 'ok') {
+                activeHighlightSource = data.source_cell;
+                boardState = data.board;
+                updateHighlightBar(data.source_cell, data.cells, data.clue_text);
+                renderBoard(boardState, false);
+            }
+        }
+
+        async function clearHighlight() {
+            const res = await fetch('/api/highlight', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cell_id: null })
+            });
+            const data = await res.json();
+            activeHighlightSource = null;
+            hintTargetCell = null;
+            updateHighlightBar(null, [], null);
+            if (data.board) {
+                boardState = data.board;
+                renderBoard(boardState, false);
+            }
+        }
+
+        async function loadPuzzleList() {
+            const select = document.getElementById('puzzleSelect');
+            const res = await fetch('/api/puzzles');
+            const data = await res.json();
+            select.innerHTML = '';
+            for (const p of (data.puzzles || [])) {
+                const opt = document.createElement('option');
+                opt.value = p.path;
+                opt.textContent = p.label;
+                select.appendChild(opt);
+            }
+        }
+
+        async function loadSelectedPuzzle() {
+            stopAutoSolve();
+            const path = document.getElementById('puzzleSelect').value;
+            if (!path) return;
+            const res = await fetch('/api/load', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ puzzle_path: path })
+            });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                selectedCellId = null;
+                activeHighlightSource = null;
+                hintTargetCell = null;
+                boardState = data.board;
+                updateHighlightBar(null, [], null);
+                renderBoard(boardState, true);
+                renderTrace(data.trace);
+                setBanner(data.message, 'hint');
+            } else {
+                setBanner(data.message || 'Failed to load puzzle.', 'error');
+            }
         }
 
         async function restartPuzzle() {
-            logTrace("Restarting puzzle...");
-            await fetch('/api/restart', {method: 'POST'});
+            stopAutoSolve();
+            const res = await fetch('/api/restart', { method: 'POST' });
+            const data = await res.json();
+            if (data.status === 'ok') {
+                selectedCellId = null;
+                activeHighlightSource = null;
+                hintTargetCell = null;
+                boardState = data.board;
+                updateHighlightBar(null, [], null);
+                renderBoard(boardState, true);
+                renderTrace(data.trace);
+                setBanner(data.message, '');
+            } else {
+                setBanner(data.message || 'Restart failed.', 'error');
+            }
+        }
+
+        async function submitVerdict(verdict) {
+            if (!selectedCellId || autoRunning) return;
+            const res = await fetch('/api/verdict', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ cell_id: selectedCellId, verdict })
+            });
+            const data = await res.json();
+            if (data.status !== 'ok') {
+                setBanner(data.message || 'Could not submit verdict.', 'error');
+                return;
+            }
+
+            boardState = data.board;
+            if (data.result === 'ACCEPTED') {
+                hintTargetCell = null;
+                setBanner(
+                    data.is_solved ? '🎉 Case Closed! Puzzle solved with zero guessing!' : data.message,
+                    data.is_solved ? 'solved' : 'accepted'
+                );
+            } else if (data.result === 'NOT_PROVABLE') {
+                setBanner(data.message, 'warning');
+            } else {
+                setBanner(data.message, 'error');
+            }
+
+            renderBoard(boardState, false);
+            renderTrace(data.trace);
         }
 
         async function requestHint() {
-            logTrace("Requesting deductive hint...");
+            if (autoRunning) return;
             const res = await fetch('/api/hint');
             const data = await res.json();
-            logTrace(data.message || 'Hint received.');
+            if (data.status !== 'ok') {
+                setBanner(data.message || 'Hint unavailable.', 'error');
+                return;
+            }
+            if (data.board) {
+                boardState = data.board;
+            }
+            if (data.hint) {
+                hintTargetCell = data.hint.cell_id;
+                selectedCellId = data.hint.cell_id;
+                activeHighlightSource = data.hint.clue_cell_id;
+                updateHighlightBar(data.hint.clue_cell_id, data.hint.highlight_cells, data.hint.clue_text);
+                setBanner(data.message, 'hint');
+            } else {
+                setBanner(data.message, 'warning');
+            }
+            if (boardState) renderBoard(boardState, false);
+            if (data.trace) renderTrace(data.trace);
         }
 
         async function autoSolveStep() {
-            logTrace("Advancing one step...");
-            const res = await fetch('/api/step', {method: 'POST'});
+            const res = await fetch('/api/step', { method: 'POST' });
             const data = await res.json();
-            logTrace(data.message || 'Step executed.');
+            if (data.status !== 'ok') {
+                setBanner(data.message || 'Step failed.', 'error');
+                return data;
+            }
+            boardState = data.board;
+            hintTargetCell = null;
+            if (data.step && data.step.cell) {
+                selectedCellId = data.step.cell;
+            }
+            renderBoard(boardState, false);
+            renderTrace(data.trace);
+
+            if (data.done) {
+                setBanner('🎉 Case Closed! Automated solver completed the puzzle with zero guessing!', 'solved');
+            } else if (data.deadlock) {
+                setBanner(data.message, 'warning');
+            } else {
+                setBanner(data.message, 'accepted');
+            }
+            return data;
         }
 
-        async function autoSolveAll() {
-            logTrace("Auto-solving full puzzle...");
-            const res = await fetch('/api/auto', {method: 'POST'});
-            const data = await res.json();
-            logTrace(data.message || 'Auto solve complete.');
+        function stopAutoSolve() {
+            autoRunning = false;
+            setControlsDisabled(false);
+            const btn = document.getElementById('btnAuto');
+            btn.textContent = '⚡ Auto Solve';
         }
 
-        function submitVerdict(verdict) {
-            if (!currentCell) return;
-            logTrace(`Submitting ${verdict} for cell ${currentCell}...`);
-            fetch('/api/verdict', {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({cell_id: currentCell, verdict: verdict})
-            }).then(r => r.json()).then(data => {
-                logTrace(data.message || `Verdict processed: ${data.status}`);
-            });
+        async function autoSolveAnimated() {
+            if (autoRunning) {
+                stopAutoSolve();
+                setBanner('Auto-solve paused by user.', '');
+                return;
+            }
+            autoRunning = true;
+            setControlsDisabled(true);
+            const btn = document.getElementById('btnAuto');
+            btn.textContent = '⏹ Stop';
+
+            try {
+                while (autoRunning) {
+                    const data = await autoSolveStep();
+                    if (!data || data.status !== 'ok' || data.done || data.deadlock) {
+                        break;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 460));
+                }
+            } finally {
+                stopAutoSolve();
+            }
         }
+
+        // Keyboard shortcuts for snappy gameplay
+        document.addEventListener('keydown', (evt) => {
+            if (evt.target.tagName === 'SELECT' || evt.target.tagName === 'INPUT') return;
+            const key = evt.key.toLowerCase();
+            if (key === 'escape') {
+                clearHighlight();
+                selectedCellId = null;
+                if (boardState) renderBoard(boardState, false);
+            } else if ((key === 'c' || key === 'i') && selectedCellId && boardState) {
+                const cell = boardState.cells.find(c => c.id === selectedCellId);
+                if (cell && !cell.is_revealed) {
+                    submitVerdict(key === 'c' ? 'CRIMINAL' : 'INNOCENT');
+                }
+            }
+        });
+
+        // Boot: load puzzle catalog and auto-load first puzzle (or restore existing server state)
+        (async function init() {
+            await loadPuzzleList();
+            const stateRes = await fetch('/api/state');
+            const stateData = await stateRes.json();
+            if (stateData.loaded && stateData.board) {
+                boardState = stateData.board;
+                activeHighlightSource = stateData.highlight_source;
+                if (stateData.puzzle_path) {
+                    document.getElementById('puzzleSelect').value = stateData.puzzle_path;
+                }
+                renderBoard(boardState, true);
+                renderTrace(stateData.trace);
+                setBanner('Board restored. Select a card or click a clue to highlight referenced cells.');
+            } else {
+                await loadSelectedPuzzle();
+            }
+        })();
     </script>
 </body>
 </html>

@@ -18,7 +18,49 @@ from __future__ import annotations
 from typing import Any, Dict, List, Optional, Set
 
 from engine.game_engine import GameEngine
-from models.grid import Grid
+
+_PROFESSION_AVATARS: Dict[str, str] = {
+    "detective": "🕵️",
+    "doctor": "🩺",
+    "guard": "🛡️",
+    "lawyer": "⚖️",
+    "scientist": "🔬",
+    "teacher": "📚",
+    "architect": "📐",
+    "chef": "👨‍🍳",
+    "cook": "🍳",
+    "journalist": "📰",
+    "reporter": "🎙️",
+    "judge": "👨‍⚖️",
+    "engineer": "⚙️",
+    "pilot": "✈️",
+    "mechanic": "🔧",
+    "baker": "🥐",
+    "surgeon": "🏥",
+    "captain": "⚓",
+    "florist": "💐",
+    "clerk": "📋",
+    "farmer": "🌾",
+    "painter": "🎨",
+    "astronaut": "🚀",
+    "nurse": "💉",
+    "artist": "🎭",
+    "driver": "🚗",
+    "singer": "🎤",
+    "poet": "🪶",
+    "author": "📖",
+    "writer": "✍️",
+    "tailor": "🧵",
+    "actor": "🎬",
+    "mason": "🧱",
+    "miner": "⛏️",
+    "spy": "🕶️",
+}
+
+
+def get_profession_avatar(profession: str) -> str:
+    """Return a thematic avatar icon for *profession*."""
+    return _PROFESSION_AVATARS.get(profession.strip().lower(), "👤")
 
 
 class BoardView:
@@ -48,14 +90,54 @@ class BoardView:
             * ``size``: N
             * ``columns``: ['A', 'B', ...]
             * ``rows``: [1, 2, ...]
-            * ``cells``: 2D array or list of cell objects with:
+            * ``cells``: list of cell objects in row-major order with:
                 - ``id``: "A1"
+                - ``row``: 1
+                - ``col``: "A"
                 - ``name``: character name
                 - ``profession``: character profession
+                - ``avatar``: profession emoji/avatar
                 - ``is_revealed``: bool
                 - ``status``: CRIMINAL / INNOCENT / None
                 - ``clue_text``: Natural-language text if revealed, else None
+                - ``clue_type``: Clue type tag if revealed, else None
                 - ``is_highlighted``: bool
+            * ``verdicts``: dict of proven verdicts
+            * ``resolved_count``: number of resolved characters
+            * ``total_cells``: total grid cells
+            * ``is_solved``: bool
         """
-        # TODO: Implement public board state serialization
-        raise NotImplementedError("TODO: Implement BoardView.get_public_board_state()")
+        public = self.engine.get_public_state()
+        highlighted = {cid.strip().upper() for cid in (highlighted_cells or set())}
+
+        formatted_cells: List[Dict[str, Any]] = []
+        for cell in public["cells"]:
+            cid = cell["id"]
+            is_rev = bool(cell["is_revealed"])
+            clue_obj = cell.get("clue") if is_rev else None
+            formatted_cells.append(
+                {
+                    "id": cid,
+                    "row": cell["row"],
+                    "col": cell["col"],
+                    "name": cell["name"],
+                    "profession": cell["profession"],
+                    "avatar": get_profession_avatar(cell["profession"]),
+                    "is_revealed": is_rev,
+                    "status": cell["status"] if is_rev else None,
+                    "clue_text": cell["clue_text"] if is_rev else None,
+                    "clue_type": clue_obj.get("type") if isinstance(clue_obj, dict) else None,
+                    "is_highlighted": cid in highlighted,
+                }
+            )
+
+        return {
+            "size": public["grid_size"],
+            "columns": public["columns"],
+            "rows": public["rows"],
+            "cells": formatted_cells,
+            "verdicts": public["verdicts"],
+            "resolved_count": len(public["verdicts"]),
+            "total_cells": len(formatted_cells),
+            "is_solved": public["is_solved"],
+        }

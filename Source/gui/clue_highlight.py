@@ -13,9 +13,15 @@ characters/cells referenced or counted by that clue."
 
 from __future__ import annotations
 
-from typing import List, Set
+from typing import Set
 
-from models.clue import Clue
+from models.clue import (
+    Clue,
+    CompareClue,
+    DifferentClue,
+    FactClue,
+    SameClue,
+)
 from models.grid import Grid
 
 
@@ -31,13 +37,36 @@ class ClueHighlighter:
             grid: The puzzle :class:`~models.grid.Grid`.
 
         Returns:
-            A set of cell IDs (e.g. ``{'A1', 'A2', 'A3'}``).
+            A set of valid cell IDs (e.g. ``{'A1', 'A2', 'A3'}``).
         """
-        # TODO: Implement region extraction based on clue type:
-        #   - FactClue: [clue.target_cell]
-        #   - SameClue / DifferentClue: [clue.cell_a, clue.cell_b]
-        #   - CountingClue (EXACTLY, AT_LEAST, AT_MOST):
-        #       Extract cells from clue.region (row, col, neighbors, explicit list)
-        #   - Extension clues (Compare, Parity, etc.):
-        #       Extract all cells from participating regions
-        raise NotImplementedError("TODO: Implement ClueHighlighter.get_referenced_cells()")
+        if clue is None:
+            return set()
+
+        referenced: Set[str] = set()
+
+        if isinstance(clue, FactClue):
+            cell = grid.get_cell_by_id(clue.target_cell)
+            if cell is not None:
+                referenced.add(cell.cell_id)
+            return referenced
+
+        if isinstance(clue, (SameClue, DifferentClue)):
+            for cid in (clue.cell_a, clue.cell_b):
+                cell = grid.get_cell_by_id(cid)
+                if cell is not None:
+                    referenced.add(cell.cell_id)
+            return referenced
+
+        if isinstance(clue, CompareClue):
+            if clue.region is not None:
+                referenced.update(c.cell_id for c in grid.get_region(clue.region))
+            if clue.region_b is not None:
+                referenced.update(c.cell_id for c in grid.get_region(clue.region_b))
+            return referenced
+
+        # Counting clues (EXACTLY, AT_LEAST, AT_MOST), ParityClue, and any
+        # generic region-based clue.
+        if clue.region is not None:
+            referenced.update(c.cell_id for c in grid.get_region(clue.region))
+
+        return referenced

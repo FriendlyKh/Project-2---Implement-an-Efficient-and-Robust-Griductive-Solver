@@ -13,14 +13,15 @@ Example cell IDs: ``"A1"``, ``"B3"``, ``"C2"`` (column letter + row number).
 
 from __future__ import annotations
 
-from dataclasses import dataclass, field
-from typing import Optional
-
-# Forward reference — avoids circular import at runtime.
-from typing import TYPE_CHECKING
+import re
+from dataclasses import dataclass
+from typing import Any, Dict, Optional, TYPE_CHECKING
 
 if TYPE_CHECKING:
     from models.clue import Clue
+
+VALID_STATUSES = ("CRIMINAL", "INNOCENT")
+_CELL_ID_RE = re.compile(r"^([A-Za-z]+)(\d+)$")
 
 
 @dataclass
@@ -47,6 +48,17 @@ class Cell:
     clue: Optional["Clue"] = None
     is_revealed: bool = False
 
+    def __post_init__(self) -> None:
+        if not isinstance(self.row, int) or isinstance(self.row, bool) or self.row < 1:
+            raise ValueError(f"Row must be a positive integer, got {self.row!r}")
+        if not isinstance(self.col, str) or not self.col.strip().isalpha():
+            raise ValueError(f"Column must be an alphabetic string, got {self.col!r}")
+        self.col = self.col.strip().upper()
+        if self.status is not None and self.status not in VALID_STATUSES:
+            raise ValueError(
+                f"Invalid cell status {self.status!r}; expected one of {VALID_STATUSES} or None"
+            )
+
     # ------------------------------------------------------------------
     # Properties
     # ------------------------------------------------------------------
@@ -65,8 +77,7 @@ class Cell:
 
     def reveal(self) -> None:
         """Mark the cell as revealed (card flipped)."""
-        # TODO: Implement reveal logic — set is_revealed and make clue visible
-        raise NotImplementedError("TODO: Implement Cell.reveal()")
+        self.is_revealed = True
 
     def set_verdict(self, verdict: str) -> None:
         """Set the cell's status to *verdict* (``'CRIMINAL'`` or ``'INNOCENT'``).
@@ -77,17 +88,31 @@ class Cell:
         Raises:
             ValueError: If *verdict* is not a valid status string.
         """
-        # TODO: Validate and set self.status
-        raise NotImplementedError("TODO: Implement Cell.set_verdict()")
+        if verdict not in VALID_STATUSES:
+            raise ValueError(
+                f"Invalid verdict {verdict!r}; must be one of {VALID_STATUSES}"
+            )
+        self.status = verdict
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """Serialize the cell to a JSON-compatible dictionary."""
-        # TODO: Implement serialization
-        raise NotImplementedError("TODO: Implement Cell.to_dict()")
+        return {
+            "cell": self.cell_id,
+            "row": self.row,
+            "col": self.col,
+            "character_name": self.character_name,
+            "profession": self.profession,
+            "status": self.status,
+            "clue": self.clue.to_dict() if self.clue is not None else None,
+            "is_revealed": self.is_revealed,
+        }
 
     @classmethod
-    def from_dict(cls, data: dict) -> "Cell":
+    def from_dict(cls, data: Dict[str, Any]) -> "Cell":
         """Deserialize a cell from a dictionary.
+
+        Supports both full ``Cell.to_dict()`` dictionaries (``row``, ``col``,
+        ``character_name``) and puzzle JSON character entries (``cell``, ``name``).
 
         Args:
             data: Dictionary with keys matching Cell fields.
@@ -95,8 +120,56 @@ class Cell:
         Returns:
             A new :class:`Cell` instance.
         """
-        # TODO: Implement deserialization
-        raise NotImplementedError("TODO: Implement Cell.from_dict()")
+        from models.clue import Clue
+
+        if not isinstance(data, dict):
+            raise ValueError("Cell data must be a dictionary")
+
+        if "row" in data and "col" in data:
+            row = int(data["row"])
+            col = str(data["col"]).strip().upper()
+        elif "cell" in data:
+            match = _CELL_ID_RE.match(str(data["cell"]).strip())
+            if not match:
+                raise ValueError(f"Invalid cell identifier: {data['cell']!r}")
+            col = match.group(1).upper()
+            row = int(match.group(2))
+        else:
+            raise ValueError("Cell data must include either ('row', 'col') or 'cell'")
+
+        if "character_name" in data:
+            character_name = str(data["character_name"])
+        elif "name" in data:
+            character_name = str(data["name"])
+        else:
+            raise ValueError("Cell data must include 'character_name' or 'name'")
+
+        profession = str(data.get("profession", ""))
+        status = data.get("status")
+        if isinstance(status, str):
+            status = status.strip().upper()
+
+        raw_clue = data.get("clue")
+        if raw_clue is None:
+            clue = None
+        elif isinstance(raw_clue, Clue):
+            clue = raw_clue
+        elif isinstance(raw_clue, dict):
+            clue = Clue.from_dict(raw_clue)
+        else:
+            raise ValueError(f"Invalid clue field in cell data: {raw_clue!r}")
+
+        is_revealed = bool(data.get("is_revealed", False))
+
+        return cls(
+            row=row,
+            col=col,
+            character_name=character_name,
+            profession=profession,
+            status=status,
+            clue=clue,
+            is_revealed=is_revealed,
+        )
 
     def __repr__(self) -> str:
         status_str = self.status or "?"

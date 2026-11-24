@@ -98,11 +98,11 @@ def _run_auto_solve(puzzle_path: str) -> None:
 
 def _run_gui() -> None:
     """Launch the Flask web GUI."""
-    # TODO: Implement GUI launch
-    #   1. Import gui.app
-    #   2. Start Flask server
+    from config import FLASK_DEBUG, FLASK_HOST, FLASK_PORT
+    from gui.app import launch_gui
+
     print("[GUI] Starting Flask server…")
-    raise NotImplementedError("TODO: Implement GUI launch")
+    launch_gui(host=FLASK_HOST, port=FLASK_PORT, debug=FLASK_DEBUG)
 
 
 def _run_experiments(puzzle_dir: str) -> None:
