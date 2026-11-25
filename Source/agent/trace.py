@@ -20,6 +20,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 
 from engine.verdict import Verdict
+from tabulate import tabulate
 
 
 @dataclass
@@ -94,4 +95,38 @@ class DeductionTrace:
         """
         # TODO: Implement clean tabular formatting (e.g. using tabulate or manual columns)
         # Columns: Step | Cell | Character | Verdict | Queries | Newly Revealed Clue
-        raise NotImplementedError("TODO: Implement DeductionTrace.format_table()")
+        if not self.steps:
+            return "No deduction steps recorded."
+
+        headers = [
+            "Step",
+            "Cell",
+            "Character",
+            "Verdict",
+            "Active Clues",
+            "Queries",
+            "Newly Revealed Clue"
+        ]
+
+        rows = []
+        for step in self.steps:
+            verdict_str = step.verdict.name if hasattr(step.verdict, "name") else str(step.verdict)
+
+            active_clues_str = ", ".join(step.active_clue_ids) if step.active_clue_ids else "-"
+            revealed_str = step.newly_revealed_clue or "-"
+            rows.append([
+                step.step_number,
+                step.cell_id,
+                step.character_name,
+                verdict_str,
+                active_clues_str,
+                step.sat_queries_count,
+                revealed_str
+            ])
+
+        table = tabulate(rows, headers=headers, tablefmt="grid")
+        summary = (
+            f"\nTotal steps: {len(self.steps)} | "
+            f"Total SAT queries: {self.total_sat_calls}"
+        )
+        return table + summary

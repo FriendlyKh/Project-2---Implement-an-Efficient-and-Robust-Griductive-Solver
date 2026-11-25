@@ -46,8 +46,8 @@ class EntailmentChecker:
             solver: A DPLL solver instance.  If ``None``, a new one is
                 created.
         """
-        self.solver = solver or DPLL()
-        self.stats = SolverStats()
+        self.solver = solver if solver is not None else DPLL()
+        self.stats = getattr(self.solver, "stats", SolverStats())
 
     def check(self, kb: KnowledgeBase, variable: int) -> Verdict:
         """Determine the entailed verdict for *variable* given *kb*.
@@ -76,7 +76,19 @@ class EntailmentChecker:
         #        if not sat_neg: return CRIMINAL
         #        if not sat_pos: return INNOCENT
         #        return UNKNOWN
-        raise NotImplementedError("TODO: Implement EntailmentChecker.check()")
+        clauses = kb.get_clauses()
+        num_vars = kb.encoder.total_vars
+
+        sat_neg, _ = self.solver.solve(clauses, num_vars, assumptions=[-variable])
+        sat_pos, _ = self.solver.solve(clauses, num_vars, assumptions=[+variable])
+
+        if not sat_neg and not sat_pos:
+            return Verdict.INCONSISTENT
+        elif not sat_neg:
+            return Verdict.CRIMINAL
+        elif not sat_pos:
+            return Verdict.INNOCENT
+        return Verdict.UNKNOWN
 
     def check_cell(
         self, kb: KnowledgeBase, cell_id: str
@@ -91,4 +103,5 @@ class EntailmentChecker:
             Entailed verdict.
         """
         # TODO: Look up variable from kb.variable_map and delegate to check()
-        raise NotImplementedError("TODO: Implement EntailmentChecker.check_cell()")
+        variable = kb.variable_map.get_var(cell_id)
+        return self.check(kb, variable)
