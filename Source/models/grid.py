@@ -170,6 +170,7 @@ class Grid:
 
         return neighbors
 
+
     def get_region(self, region: Region) -> List[Cell]:
         """Resolve a :class:`Region` specification into a list of cells.
 

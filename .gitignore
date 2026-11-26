@@ -71,3 +71,8 @@ Source/experiments/results/*.csv
 Source/experiments/results/*.json
 Source/experiments/results/*.txt
 !Source/experiments/results/.gitkeep
+
+# Graphify
+graphify-out/
+.agents/
+.gitattributes

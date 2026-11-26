@@ -20,7 +20,7 @@ from engine.verdict import Verdict
 from logic.knowledge_base import KnowledgeBase
 from models.cell import Cell
 from models.clue import Clue
-
+from models.grid import Grid
 
 class HintProvider:
     """Computes hints by purely deductive reasoning over the public Knowledge Base."""
@@ -59,4 +59,17 @@ class HintProvider:
         #        Find an active clue that references this cell (if active_clues given)
         #        return (cell.cell_id, verdict, relevant_clue_description)
         #   4. If loop completes with no forced cells, return None.
-        raise NotImplementedError("TODO: Implement HintProvider.get_hint()")
+        for cell in sorted(unresolved_cells, key=lambda c: (c.row, c.col)):
+            verdict = self.checker.check_cell(kb, cell.cell_id)
+
+            if verdict in (Verdict.CRIMINAL,Verdict.INNOCENT):
+                explanation = None
+                if active_clues is not None:
+                    for clue in active_clues:
+                        region_ids = {c.cell_id for c in kb.grid.get_region(clue.region)}
+
+                        if cell.cell_id in region_ids:
+                            explanation = clue.description or f"{clue.clue_type} clue"
+                            break
+                return (cell.cell_id, verdict, explanation)
+        return None

@@ -60,7 +60,6 @@ class TraceStep:
             "notes": self.notes,
         }
 
-
 class DeductionTrace:
     """Complete log of all deduction steps during puzzle resolution.
 

@@ -27,10 +27,10 @@ from engine.game_engine import GameEngine
 from engine.verdict import Verdict
 from logic.knowledge_base import KnowledgeBase
 from logic.variable_map import VariableMap
+from logic.cnf_encoder import CNFEncoder
 from models.clue import Clue
 from models.puzzle import Puzzle
 from solver.dpll import DPLL
-
 
 class LogicAgent:
     """Automatic no-guess deduction agent.
@@ -79,8 +79,19 @@ class LogicAgent:
         #   kb = KnowledgeBase(variable_map=..., encoder=...)
         #   while not engine.is_solved():
         #       ...
-        raise NotImplementedError("TODO: Implement LogicAgent.solve()")
+        kb = engine.build_public_kb()
 
+        while not engine.is_solved():
+            step = self.step(engine, kb)
+
+            #no unresolved cell is forced
+            if step is None:
+                break
+
+            self.trace.add_step(step)
+
+        return self.trace
+    
     def step(self, engine: GameEngine, kb: KnowledgeBase) -> Optional[TraceStep]:
         """Perform a single step of deduction.
 
@@ -96,7 +107,49 @@ class LogicAgent:
             or ``None`` if no character could be forced.
         """
         # TODO: Implement single-step deduction
-        raise NotImplementedError("TODO: Implement LogicAgent.step()")
+        unresolved_cells = engine.get_public_state()['unresolved_cells']
+        queries_before = self.solver.stats.sat_calls 
+
+        for cell_id in unresolved_cells:
+            verdict = self.entailment.check_cell(kb, cell_id)
+
+
+            if verdict not in (Verdict.INNOCENT, Verdict.CRIMINAL):
+                continue
+
+            active = [
+                f"{cid}: {clue.description or clue.clue_type}"
+                for cid, clue in engine.get_revealed_clues()
+            ]
+            result = engine.submit_verdict(cell_id, verdict)
+
+            if result != Verdict.ACCEPTED:
+                raise RuntimeError(
+                    f"KB entails {verdict.name} for {cell_id} but engine returned {result.name}"
+                )
+
+            clue = engine.reveal_card(cell_id)
+
+            if clue is not None:
+                kb.add_clue(clue)
+
+            kb.add_verdict(cell_id, verdict == verdict.CRIMINAL)
+
+            cell = kb.grid.get_cell_by_id(cell_id)
+
+            return TraceStep(
+                step_number=len(self.trace.steps) + 1,
+                cell_id=cell_id,
+                character_name= cell.character_name if cell else 'NotFound',
+                verdict=verdict,
+                active_clue_ids=active,
+                sat_queries_count=self.solver.stats.sat_calls - queries_before,
+                newly_revealed_clue=clue.description if clue is not None else None,
+                notes=None,
+            )
+        #no unresolved cell is forced
+        return None
+              
 
     def check_uniqueness(self, puzzle: Puzzle) -> bool:
         """Verify whether the complete set of all clues guarantees a UNIQUE solution.
@@ -120,4 +173,28 @@ class LogicAgent:
             ``True`` if exactly one solution exists, ``False`` otherwise.
         """
         # TODO: Implement uniqueness check via blocking clause technique
-        raise NotImplementedError("TODO: Implement LogicAgent.check_uniqueness()")
+        grid = puzzle.grid
+        cells = grid.get_all_cells()
+
+        vmap = VariableMap()
+        vmap.register_all([{"name": c.character_name, "cell": c.cell_id} for c in cells])
+        encoder = CNFEncoder(grid, vmap)
+
+        clauses = []
+        for cell in cells:
+            if cell.clue is not None:
+                clauses.extend(encoder.encode_clue(cell.clue))
+        num_vars = encoder.total_vars          # gồm cả biến phụ
+
+        solver = DPLL()
+
+        sat, model = solver.solve(clauses, num_vars)
+        if not sat:
+            return False          
+
+        cell_vars = [vmap.get_var(c.cell_id) for c in cells]
+        blocking = [-v if model.get(v, False) else v for v in cell_vars]
+
+        sat2, _ = solver.solve(clauses + [blocking], num_vars)
+        return not sat2
+
