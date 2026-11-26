@@ -23,7 +23,7 @@
         "cell_a": "B1",
         "cell_b": "C2",
         "region": {"type": "cells", "value": ["B1", "C2"]},
-        "description": "Bob and Clara have the same status."
+        "description": "Bob and Franz have the same status."
       }
     },
     {
@@ -58,9 +58,9 @@
       "status": "INNOCENT",
       "clue": {
         "type": "EXACTLY",
-        "k": 2,
+        "k": 1,
         "region": {"type": "row", "value": 2},
-        "description": "Exactly 2 criminals in row 2."
+        "description": "Exactly 1 criminal in row 2."
       }
     },
     {
@@ -69,11 +69,10 @@
       "profession": "Teacher",
       "status": "INNOCENT",
       "clue": {
-        "type": "DIFFERENT",
-        "cell_a": "C2",
-        "cell_b": "A1",
-        "region": {"type": "cells", "value": ["C2", "A1"]},
-        "description": "Franz and Alice have different statuses."
+        "type": "EXACTLY",
+        "k": 1,
+        "region": {"type": "column", "value": "B"},
+        "description": "Exactly 1 criminal in column B."
       }
     },
     {

@@ -17,6 +17,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass, field
+from typing import Optional
 
 
 @dataclass
@@ -40,7 +41,7 @@ class SolverStats:
     sat_calls: int = 0
 
     # Internal timer (not serialised)
-    _start_time: float = field(default=0.0, repr=False)
+    _start_time: Optional[float] = field(default=None, repr=False)
 
     def start_timer(self) -> None:
         """Begin timing a solver call."""
@@ -48,9 +49,19 @@ class SolverStats:
 
     def stop_timer(self) -> None:
         """Stop the timer and accumulate elapsed time."""
-        if self._start_time > 0:
+        if self._start_time is not None:
             self.runtime_seconds += time.perf_counter() - self._start_time
-            self._start_time = 0.0
+            self._start_time = None
+
+    def reset(self) -> None:
+        """Reset all counters and timer in-place."""
+        self.decisions = 0
+        self.propagations = 0
+        self.backtracks = 0
+        self.conflicts = 0
+        self.runtime_seconds = 0.0
+        self.sat_calls = 0
+        self._start_time = None
 
     def record_decision(self) -> None:
         """Increment the decision counter."""

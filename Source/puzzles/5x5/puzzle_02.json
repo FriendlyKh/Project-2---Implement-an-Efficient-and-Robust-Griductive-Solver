@@ -1,0 +1,35 @@
+{
+  "size": 5,
+  "characters": [
+    {"cell": "A1", "name": "Aria", "profession": "Detective", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "row", "value": 1}, "description": "Odd number of criminals in row 1."}},
+    {"cell": "B1", "name": "Bram", "profession": "Archivist", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "column", "value": "A"}, "description": "Exactly 2 criminals in column A."}},
+    {"cell": "C1", "name": "Cora", "profession": "Botanist", "status": "INNOCENT", "clue": {"type": "COMPARE", "operator": ">", "region": {"type": "row", "value": 2}, "region_b": {"type": "row", "value": 1}, "description": "More criminals in row 2 than row 1."}},
+    {"cell": "D1", "name": "Dion", "profession": "Chemist", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 1}, "description": "Exactly 1 criminal in row 1."}},
+    {"cell": "E1", "name": "Esme", "profession": "Curator", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "column", "value": "E"}, "description": "Exactly 1 criminal in column E."}},
+
+    {"cell": "A2", "name": "Finn", "profession": "Engineer", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "row", "value": 2}, "description": "Exactly 2 criminals in row 2."}},
+    {"cell": "B2", "name": "Gwen", "profession": "Forensic", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 4, "region": {"type": "neighbors", "value": "C3"}, "description": "Exactly 4 criminals among neighbors of C3."}},
+    {"cell": "C2", "name": "Hank", "profession": "Geologist", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "C2", "cell_b": "C3", "region": {"type": "cells", "value": ["C2", "C3"]}, "description": "Hank and Iris have the same status."}},
+    {"cell": "D2", "name": "Inez", "profession": "Historian", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "column", "value": "D"}, "description": "Exactly 2 criminals in column D."}},
+    {"cell": "E2", "name": "Jude", "profession": "Inspector", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "neighbors", "value": "E5"}, "description": "Exactly 1 criminal among neighbors of E5."}},
+
+    {"cell": "A3", "name": "Kira", "profession": "Journalist", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 3}, "description": "Exactly 1 criminal in row 3."}},
+    {"cell": "B3", "name": "Liam", "profession": "Locksmith", "status": "INNOCENT", "clue": {"type": "DIFFERENT", "cell_a": "B3", "cell_b": "B2", "region": {"type": "cells", "value": ["B3", "B2"]}, "description": "Liam and Gwen have different statuses."}},
+    {"cell": "C3", "name": "Iris", "profession": "Mediator", "status": "INNOCENT", "clue": {"type": "COMPARE", "operator": "==", "region": {"type": "row", "value": 3}, "region_b": {"type": "row", "value": 5}, "description": "Row 3 and row 5 have the same number of criminals."}},
+    {"cell": "D3", "name": "Milo", "profession": "Navigator", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "column", "value": "B"}, "description": "Exactly 2 criminals in column B."}},
+    {"cell": "E3", "name": "Nora", "profession": "Optician", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "row", "value": 4}, "description": "Exactly 2 criminals in row 4."}},
+
+    {"cell": "A4", "name": "Owen", "profession": "Pharmacist", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "neighbors", "value": "D1"}, "description": "Exactly 1 criminal among neighbors of D1."}},
+    {"cell": "B4", "name": "Pia", "profession": "Quartermaster", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "row", "value": 4}, "description": "Even number of criminals in row 4."}},
+    {"cell": "C4", "name": "Quin", "profession": "Researcher", "status": "INNOCENT", "clue": {"type": "DIFFERENT", "cell_a": "C4", "cell_b": "D4", "region": {"type": "cells", "value": ["C4", "D4"]}, "description": "Quin and Rhea have different statuses."}},
+    {"cell": "D4", "name": "Rhea", "profession": "Sculptor", "status": "CRIMINAL", "clue": {"type": "AT_LEAST", "k": 2, "region": {"type": "row", "value": 4}, "description": "At least 2 criminals in row 4."}},
+    {"cell": "E4", "name": "Soren", "profession": "Translator", "status": "INNOCENT", "clue": {"type": "AT_MOST", "k": 1, "region": {"type": "column", "value": "E"}, "description": "At most 1 criminal in column E."}},
+
+    {"cell": "A5", "name": "Tess", "profession": "Usher", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 5}, "description": "Exactly 1 criminal in row 5."}},
+    {"cell": "B5", "name": "Umar", "profession": "Violinist", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "B5", "cell_b": "D5", "region": {"type": "cells", "value": ["B5", "D5"]}, "description": "Umar and Wren have the same status."}},
+    {"cell": "C5", "name": "Vera", "profession": "Watchmaker", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 0, "region": {"type": "column", "value": "C"}, "description": "No criminals in column C."}},
+    {"cell": "D5", "name": "Wren", "profession": "Xylophonist", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "A5", "is_criminal": true, "region": {"type": "cells", "value": ["A5"]}, "description": "Tess in A5 is Criminal."}},
+    {"cell": "E5", "name": "Zara", "profession": "Zoologist", "status": "INNOCENT", "clue": {"type": "AT_MOST", "k": 2, "region": {"type": "column", "value": "A"}, "description": "At most 2 criminals in column A."}}
+  ],
+  "initially_revealed": ["A1", "D1", "E1", "D2", "C5"]
+}
