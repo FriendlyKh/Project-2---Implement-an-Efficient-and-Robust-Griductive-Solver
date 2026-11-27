@@ -23,8 +23,6 @@ For character variable *C_i*:
 
 from __future__ import annotations
 
-from typing import Tuple
-
 from engine.verdict import Verdict
 from logic.knowledge_base import KnowledgeBase
 from solver.dpll import DPLL
@@ -64,18 +62,6 @@ class EntailmentChecker:
             One of ``Verdict.CRIMINAL``, ``Verdict.INNOCENT``,
             ``Verdict.UNKNOWN``, or ``Verdict.INCONSISTENT``.
         """
-        # TODO: Implement the two-SAT-call entailment procedure
-        #   1. clauses = kb.get_clauses()
-        #   2. num_vars = kb.encoder.total_vars
-        #   3. Test KB ∧ ¬variable:
-        #        sat_neg, _ = self.solver.solve(clauses, num_vars, assumptions=[-variable])
-        #   4. Test KB ∧ variable:
-        #        sat_pos, _ = self.solver.solve(clauses, num_vars, assumptions=[variable])
-        #   5. Combine:
-        #        if not sat_neg and not sat_pos: return INCONSISTENT
-        #        if not sat_neg: return CRIMINAL
-        #        if not sat_pos: return INNOCENT
-        #        return UNKNOWN
         clauses = kb.get_clauses()
         num_vars = kb.encoder.total_vars
 
@@ -102,6 +88,5 @@ class EntailmentChecker:
         Returns:
             Entailed verdict.
         """
-        # TODO: Look up variable from kb.variable_map and delegate to check()
         variable = kb.variable_map.get_var(cell_id)
         return self.check(kb, variable)

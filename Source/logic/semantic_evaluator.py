@@ -88,11 +88,13 @@ class SemanticEvaluator:
         Returns:
             Dictionary mapping clue description → satisfied (bool).
         """
-        # TODO: Iterate over clues and call evaluate()
-        _dict = {}
+        _dict: Dict[str, bool] = {}
 
-        for clue in clues:
-            _dict[clue.description] = self.evaluate(clue, assignment)
+        for idx, clue in enumerate(clues, start=1):
+            key = clue.description or f"{clue.clue_type}#{idx}"
+            if key in _dict:
+                key = f"{key} (#{idx})"
+            _dict[key] = self.evaluate(clue, assignment)
 
         return _dict
 

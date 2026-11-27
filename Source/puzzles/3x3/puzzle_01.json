@@ -33,9 +33,9 @@
       "status": "INNOCENT",
       "clue": {
         "type": "AT_MOST",
-        "k": 1,
+        "k": 0,
         "region": {"type": "column", "value": "C"},
-        "description": "At most 1 criminal in column C."
+        "description": "At most 0 criminals in column C."
       }
     },
     {

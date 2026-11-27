@@ -102,8 +102,7 @@ class KnowledgeBase:
         Returns:
             List of clauses (each clause is a list of signed ints).
         """
-        # TODO: Return a shallow copy of self._clauses
-        return copy.copy(self._clauses)
+        return [list(clause) for clause in self._clauses]
 
     def get_stats(self) -> Dict[str, int]:
         """Return statistics about the current KB.

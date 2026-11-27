@@ -213,11 +213,14 @@ class GameEngine:
     def submit_verdict(self, cell_id: str, verdict: Verdict) -> Verdict:
         """Submit a verdict for character at *cell_id*.
 
-        The engine checks:
-        1. Does the verdict match the hidden solution?
-           - No → return ``Verdict.CONTRADICTED`` (without revealing the card)
-        2. Is the verdict logically provable from revealed clues?
-           - No → return ``Verdict.NOT_PROVABLE`` (without revealing the card)
+        The engine checks (per specification Section 2.2 & 4.1):
+        1. Is a verdict logically forced from revealed clues?
+           - Neither verdict forced → return ``Verdict.NOT_PROVABLE`` (without
+             revealing the card or leaking the hidden solution).
+           - Opposite verdict forced → return ``Verdict.CONTRADICTED`` (without
+             revealing the card).
+        2. Does the verdict match the hidden solution?
+           - No → return ``Verdict.CONTRADICTED`` (without revealing the card).
         3. Otherwise → accept the verdict, reveal the cell's clue, and
            return ``Verdict.ACCEPTED``.
 
@@ -247,18 +250,20 @@ class GameEngine:
         if cid in self.verdicts:
             raise ValueError(f"Cell {cid} is already resolved")
 
-        # 1. Ground-truth check (never reveal on contradiction)
-        expected = Verdict.CRIMINAL if self.puzzle.solution[cid] else Verdict.INNOCENT
-        if verdict != expected:
-            return Verdict.CONTRADICTED
-
-        # 2. Logical provability check (no-guess enforcement)
+        # 1. Logical provability check FIRST (no-guess enforcement; never leak hidden status)
         if self._require_proof:
             entailed = self.check_public_entailment(cid)
             if entailed == Verdict.INCONSISTENT:
                 return Verdict.INCONSISTENT
-            if entailed != verdict:
+            if entailed == Verdict.UNKNOWN:
                 return Verdict.NOT_PROVABLE
+            if entailed != verdict:
+                return Verdict.CONTRADICTED
+
+        # 2. Ground-truth consistency check (never reveal on contradiction)
+        expected = Verdict.CRIMINAL if self.puzzle.solution[cid] else Verdict.INNOCENT
+        if verdict != expected:
+            return Verdict.CONTRADICTED
 
         # 3. Accept verdict, flip card, expose clue
         self.verdicts[cid] = verdict

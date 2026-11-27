@@ -21,10 +21,98 @@ import re
 from pathlib import Path
 from typing import Any, Dict, List
 
-from models.clue import Clue
+from models.clue import (
+    AtLeastClue,
+    AtMostClue,
+    Clue,
+    CompareClue,
+    DifferentClue,
+    ExactlyClue,
+    FactClue,
+    Region,
+    SameClue,
+)
 from models.puzzle import Puzzle
 
 _CELL_ID_RE = re.compile(r"^([A-Za-z]+)(\d+)$")
+
+
+def _validate_region(region: Region, size: int, seen_cells: set[str]) -> int:
+    """Validate *region* against grid bounds and return the number of cells in it."""
+    rtype = region.region_type.strip().lower()
+    valid_cols = {chr(ord("A") + i) for i in range(size)}
+
+    if rtype == "row":
+        if region.value is None or not isinstance(region.value, int) or isinstance(region.value, bool):
+            raise ValueError(f"Row region requires an integer row number, got {region.value!r}")
+        if region.value < 1 or region.value > size:
+            raise ValueError(f"Row {region.value} out of bounds for {size}×{size} grid")
+        return size
+
+    if rtype in ("column", "col"):
+        col = str(region.value).strip().upper() if region.value is not None else ""
+        if col not in valid_cols:
+            raise ValueError(f"Column {region.value!r} out of bounds for {size}×{size} grid")
+        return size
+
+    if rtype == "cells":
+        if not isinstance(region.value, list) or not region.value:
+            raise ValueError("Explicit 'cells' region requires a non-empty list of cell IDs")
+        unique_ids = set()
+        for raw_id in region.value:
+            cid = str(raw_id).strip().upper()
+            if cid not in seen_cells:
+                raise ValueError(f"Region references unknown cell {raw_id!r}")
+            unique_ids.add(cid)
+        return len(unique_ids)
+
+    if rtype in ("neighbors", "neighbours"):
+        if not isinstance(region.value, str):
+            raise ValueError("Neighbors region requires a center cell ID string")
+        center = region.value.strip().upper()
+        if center not in seen_cells:
+            raise ValueError(f"Neighbors center cell {region.value!r} not in grid")
+        match = _CELL_ID_RE.match(center)
+        assert match is not None
+        col_idx = ord(match.group(1)) - ord("A")
+        row = int(match.group(2))
+        return sum(
+            1
+            for dr in (-1, 0, 1)
+            for dc in (-1, 0, 1)
+            if not (dr == 0 and dc == 0)
+            and 1 <= row + dr <= size
+            and 0 <= col_idx + dc < size
+        )
+
+    if rtype == "all":
+        return size * size
+
+    raise ValueError(f"Unknown region type: {region.region_type!r}")
+
+
+def _validate_clue(clue: Clue, size: int, seen_cells: set[str]) -> None:
+    """Validate clue referenced cells, regions, and counting bounds (0 <= k <= |R|)."""
+    if isinstance(clue, FactClue):
+        if clue.target_cell not in seen_cells:
+            raise ValueError(f"FactClue target_cell {clue.target_cell!r} not in grid")
+    elif isinstance(clue, (SameClue, DifferentClue)):
+        for cid in (clue.cell_a, clue.cell_b):
+            if cid not in seen_cells:
+                raise ValueError(f"{clue.clue_type} clue references unknown cell {cid!r}")
+    elif isinstance(clue, CompareClue):
+        _validate_region(clue.region, size, seen_cells)
+        if clue.region_b is None:
+            raise ValueError("CompareClue requires 'region_b'")
+        _validate_region(clue.region_b, size, seen_cells)
+    elif isinstance(clue, (ExactlyClue, AtLeastClue, AtMostClue)):
+        region_size = _validate_region(clue.region, size, seen_cells)
+        if clue.k < 0 or clue.k > region_size:
+            raise ValueError(
+                f"{clue.clue_type} clue parameter k={clue.k} out of range [0, {region_size}]"
+            )
+    else:
+        _validate_region(clue.region, size, seen_cells)
 
 
 class PuzzleLoader:
@@ -94,6 +182,7 @@ class PuzzleLoader:
         * Each character has required fields: ``cell``, ``name``,
           ``profession``, ``status``, ``clue``.
         * Cell IDs are unique and within the ``A1 .. N×N`` coordinate range.
+        * Clue parameters and referenced regions are valid for the grid.
         * ``'initially_revealed'`` cell IDs are valid.
 
         Args:
@@ -122,6 +211,7 @@ class PuzzleLoader:
 
         valid_cols = {chr(ord("A") + i) for i in range(size)}
         seen_cells: set[str] = set()
+        parsed_clues: List[Clue] = []
         required_keys = ("cell", "name", "profession", "status", "clue")
 
         for idx, char in enumerate(characters):
@@ -155,7 +245,10 @@ class PuzzleLoader:
                 )
 
             if char["clue"] is not None:
-                Clue.from_dict(char["clue"])
+                parsed_clues.append(Clue.from_dict(char["clue"]))
+
+        for clue in parsed_clues:
+            _validate_clue(clue, size, seen_cells)
 
         initially_revealed = data.get("initially_revealed")
         if not isinstance(initially_revealed, list):
