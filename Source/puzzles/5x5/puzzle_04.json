@@ -1,0 +1,35 @@
+{
+  "size": 5,
+  "characters": [
+    {"cell": "A1", "name": "Yusuf", "profession": "Engineer", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4", "E4", "A5", "B5", "C5", "D5", "E5"]}, "description": "Odd number of criminals in cells E3, A4, B4, C4, D4, E4, A5, B5, C5, D5, E5."}},
+    {"cell": "B1", "name": "Adrian", "profession": "Archivist", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4", "E4", "A5", "B5", "C5", "D5"]}, "description": "Odd number of criminals in cells E3, A4, B4, C4, D4, E4, A5, B5, C5, D5."}},
+    {"cell": "C1", "name": "Bianca", "profession": "Botanist", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 4, "region": {"type": "neighbors", "value": "B3"}, "description": "Exactly 4 criminals in neighbors of B3."}},
+    {"cell": "D1", "name": "Cedric", "profession": "Cartographer", "status": "INNOCENT", "clue": {"type": "COMPARE", "operator": "!=", "region": {"type": "column", "value": "E"}, "region_b": {"type": "row", "value": 1}, "description": "Different number of criminals in column E and row 1."}},
+    {"cell": "E1", "name": "Daphne", "profession": "Cryptographer", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 4, "region": {"type": "neighbors", "value": "B2"}, "description": "Exactly 4 criminals in neighbors of B2."}},
+
+    {"cell": "A2", "name": "Edgar", "profession": "Detective", "status": "INNOCENT", "clue": {"type": "COMPARE", "operator": "!=", "region": {"type": "column", "value": "C"}, "region_b": {"type": "cells", "value": ["A1", "B2", "C3", "D4", "E5"]}, "description": "Different number of criminals in column C and the main diagonal (A1, B2, C3, D4, E5)."}},
+    {"cell": "B2", "name": "Freya", "profession": "Economist", "status": "CRIMINAL", "clue": {"type": "COMPARE", "operator": "!=", "region": {"type": "row", "value": 5}, "region_b": {"type": "column", "value": "E"}, "description": "Different number of criminals in row 5 and column E."}},
+    {"cell": "C2", "name": "Gideon", "profession": "Forensic", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 3, "region": {"type": "neighbors", "value": "D4"}, "description": "Exactly 3 criminals in neighbors of D4."}},
+    {"cell": "D2", "name": "Helena", "profession": "Geologist", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 5, "region": {"type": "neighbors", "value": "C2"}, "description": "Exactly 5 criminals in neighbors of C2."}},
+    {"cell": "E2", "name": "Isaac", "profession": "Historian", "status": "CRIMINAL", "clue": {"type": "COMPARE", "operator": "!=", "region": {"type": "column", "value": "D"}, "region_b": {"type": "row", "value": 2}, "description": "Different number of criminals in column D and row 2."}},
+
+    {"cell": "A3", "name": "Jolene", "profession": "Inspector", "status": "INNOCENT", "clue": {"type": "COMPARE", "operator": "!=", "region": {"type": "row", "value": 1}, "region_b": {"type": "column", "value": "A"}, "description": "Different number of criminals in row 1 and column A."}},
+    {"cell": "B3", "name": "Kieran", "profession": "Journalist", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["A1", "B1", "D2"]}, "description": "Odd number of criminals in cells A1, B1, D2."}},
+    {"cell": "C3", "name": "Lydia", "profession": "Locksmith", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 5, "region": {"type": "neighbors", "value": "D2"}, "description": "Exactly 5 criminals in neighbors of D2."}},
+    {"cell": "D3", "name": "Marcus", "profession": "Mathematician", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["A1", "B1", "C3"]}, "description": "Odd number of criminals in cells A1, B1, C3."}},
+    {"cell": "E3", "name": "Nadia", "profession": "Navigator", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 4, "region": {"type": "neighbors", "value": "B4"}, "description": "Exactly 4 criminals in neighbors of B4."}},
+
+    {"cell": "A4", "name": "Orson", "profession": "Optician", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "cells", "value": ["A1", "B1", "D3"]}, "description": "Even number of criminals in cells A1, B1, D3."}},
+    {"cell": "B4", "name": "Petra", "profession": "Pharmacist", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["A1", "B1", "E3"]}, "description": "Odd number of criminals in cells A1, B1, E3."}},
+    {"cell": "C4", "name": "Quentin", "profession": "Quartermaster", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["A1", "E3", "A4"]}, "description": "Odd number of criminals in cells A1, E3, A4."}},
+    {"cell": "D4", "name": "Rosalind", "profession": "Researcher", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["E3", "A4", "B4"]}, "description": "Odd number of criminals in cells E3, A4, B4."}},
+    {"cell": "E4", "name": "Silas", "profession": "Statistician", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4"]}, "description": "Even number of criminals in cells E3, A4, B4, C4."}},
+
+    {"cell": "A5", "name": "Tessa", "profession": "Translator", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4"]}, "description": "Even number of criminals in cells E3, A4, B4, C4, D4."}},
+    {"cell": "B5", "name": "Ulric", "profession": "Analyst", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4", "E4"]}, "description": "Even number of criminals in cells E3, A4, B4, C4, D4, E4."}},
+    {"cell": "C5", "name": "Valerie", "profession": "Broker", "status": "CRIMINAL", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4", "E4", "A5"]}, "description": "Even number of criminals in cells E3, A4, B4, C4, D4, E4, A5."}},
+    {"cell": "D5", "name": "Walter", "profession": "Curator", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "even", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4", "E4", "A5", "B5"]}, "description": "Even number of criminals in cells E3, A4, B4, C4, D4, E4, A5, B5."}},
+    {"cell": "E5", "name": "Ximena", "profession": "Diplomat", "status": "INNOCENT", "clue": {"type": "PARITY", "parity": "odd", "region": {"type": "cells", "value": ["E3", "A4", "B4", "C4", "D4", "E4", "A5", "B5", "C5"]}, "description": "Odd number of criminals in cells E3, A4, B4, C4, D4, E4, A5, B5, C5."}}
+  ],
+  "initially_revealed": ["A1", "B1", "C1", "A2", "B2"]
+}

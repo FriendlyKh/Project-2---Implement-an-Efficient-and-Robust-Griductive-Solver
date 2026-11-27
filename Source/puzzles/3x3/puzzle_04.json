@@ -1,0 +1,181 @@
+{
+  "size": 3,
+  "characters": [
+    {
+      "cell": "A1",
+      "name": "Edgar",
+      "profession": "Detective",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "PARITY",
+        "parity": "even",
+        "region": {
+          "type": "cells",
+          "value": [
+            "B1",
+            "C1",
+            "B2",
+            "C2",
+            "A3",
+            "B3",
+            "C3"
+          ]
+        },
+        "description": "Even number of criminals in cells B1, C1, B2, C2, A3, B3, C3."
+      }
+    },
+    {
+      "cell": "B1",
+      "name": "Freya",
+      "profession": "Economist",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "COMPARE",
+        "operator": "!=",
+        "region": {
+          "type": "column",
+          "value": "B"
+        },
+        "region_b": {
+          "type": "cells",
+          "value": [
+            "C1",
+            "B2",
+            "A3"
+          ]
+        },
+        "description": "Different number of criminals in column B and the anti-diagonal (C1, B2, A3)."
+      }
+    },
+    {
+      "cell": "C1",
+      "name": "Gideon",
+      "profession": "Forensic",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "COMPARE",
+        "operator": "!=",
+        "region": {
+          "type": "column",
+          "value": "B"
+        },
+        "region_b": {
+          "type": "column",
+          "value": "C"
+        },
+        "description": "Different number of criminals in column B and column C."
+      }
+    },
+    {
+      "cell": "A2",
+      "name": "Helena",
+      "profession": "Geologist",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "PARITY",
+        "parity": "even",
+        "region": {
+          "type": "cells",
+          "value": [
+            "B1",
+            "C1",
+            "B2",
+            "C2",
+            "A3",
+            "B3"
+          ]
+        },
+        "description": "Even number of criminals in cells B1, C1, B2, C2, A3, B3."
+      }
+    },
+    {
+      "cell": "B2",
+      "name": "Isaac",
+      "profession": "Historian",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "PARITY",
+        "parity": "even",
+        "region": {
+          "type": "row",
+          "value": 1
+        },
+        "description": "Even number of criminals in row 1."
+      }
+    },
+    {
+      "cell": "C2",
+      "name": "Jolene",
+      "profession": "Inspector",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 4,
+        "region": {
+          "type": "all"
+        },
+        "description": "Exactly 4 criminals in the entire grid."
+      }
+    },
+    {
+      "cell": "A3",
+      "name": "Kieran",
+      "profession": "Journalist",
+      "status": "CRIMINAL",
+      "clue": {
+        "type": "EXACTLY",
+        "k": 3,
+        "region": {
+          "type": "neighbors",
+          "value": "B2"
+        },
+        "description": "Exactly 3 criminals in neighbors of B2."
+      }
+    },
+    {
+      "cell": "B3",
+      "name": "Lydia",
+      "profession": "Locksmith",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "PARITY",
+        "parity": "odd",
+        "region": {
+          "type": "cells",
+          "value": [
+            "B1",
+            "C1",
+            "B2",
+            "C2"
+          ]
+        },
+        "description": "Odd number of criminals in cells B1, C1, B2, C2."
+      }
+    },
+    {
+      "cell": "C3",
+      "name": "Marcus",
+      "profession": "Mathematician",
+      "status": "INNOCENT",
+      "clue": {
+        "type": "PARITY",
+        "parity": "even",
+        "region": {
+          "type": "cells",
+          "value": [
+            "B1",
+            "C1",
+            "B2",
+            "C2",
+            "A3"
+          ]
+        },
+        "description": "Even number of criminals in cells B1, C1, B2, C2, A3."
+      }
+    }
+  ],
+  "initially_revealed": [
+    "A1",
+    "A2"
+  ]
+}
