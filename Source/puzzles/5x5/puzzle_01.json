@@ -9,7 +9,7 @@
 
     {"cell": "A2", "name": "Faye", "profession": "Nurse", "status": "INNOCENT", "clue": {"type": "DIFFERENT", "cell_a": "A2", "cell_b": "B1", "region": {"type": "cells", "value": ["A2", "B1"]}, "description": "Faye and Beth different status."}},
     {"cell": "B2", "name": "Gabe", "profession": "Clerk", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 2}, "description": "Exactly 1 criminal in row 2."}},
-    {"cell": "C2", "name": "Cole", "profession": "Baker", "status": "CRIMINAL", "clue": {"type": "AT_LEAST", "k": 1, "region": {"type": "row", "value": 2}, "description": "At least 1 criminal in row 2."}},
+    {"cell": "C2", "name": "Cole", "profession": "Baker", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 2}, "description": "Exactly 1 criminal in row 2."}},
     {"cell": "D2", "name": "Hope", "profession": "Pilot", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "C2", "is_criminal": true, "region": {"type": "cells", "value": ["C2"]}, "description": "Cole in C2 is Criminal."}},
     {"cell": "E2", "name": "Ivan", "profession": "Driver", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "E2", "cell_b": "D2", "region": {"type": "cells", "value": ["E2", "D2"]}, "description": "Ivan and Hope same status."}},
 
@@ -21,9 +21,9 @@
 
     {"cell": "A4", "name": "Opal", "profession": "Actor", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 4}, "description": "Exactly 1 criminal in row 4."}},
     {"cell": "B4", "name": "Paul", "profession": "Farmer", "status": "CRIMINAL", "clue": {"type": "FACT", "target_cell": "A4", "is_criminal": false, "region": {"type": "cells", "value": ["A4"]}, "description": "Opal in A4 is Innocent."}},
-    {"cell": "C4", "name": "Quinn", "profession": "Mason", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "C4", "cell_b": "A4", "region": {"type": "cells", "value": ["C4", "A4"]}, "description": "Quinn and Opal same status."}},
+    {"cell": "C4", "name": "Quinn", "profession": "Mason", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 5}, "description": "Exactly 1 criminal in row 5."}},
     {"cell": "D4", "name": "Rose", "profession": "Florist", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 0, "region": {"type": "column", "value": "D"}, "description": "No criminals in col D."}},
-    {"cell": "E4", "name": "Seth", "profession": "Miner", "status": "INNOCENT", "clue": {"type": "DIFFERENT", "cell_a": "E4", "cell_b": "B4", "region": {"type": "cells", "value": ["E4", "B4"]}, "description": "Seth and Paul different status."}},
+    {"cell": "E4", "name": "Seth", "profession": "Miner", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "column", "value": "E"}, "description": "Exactly 2 criminals in column E."}},
 
     {"cell": "A5", "name": "Tara", "profession": "Guard", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 5}, "description": "Exactly 1 criminal in row 5."}},
     {"cell": "B5", "name": "Uri", "profession": "Doctor", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "B5", "cell_b": "A5", "region": {"type": "cells", "value": ["B5", "A5"]}, "description": "Uri and Tara same status."}},

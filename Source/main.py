@@ -107,12 +107,22 @@ def _run_gui() -> None:
 
 def _run_experiments(puzzle_dir: str) -> None:
     """Run batch experiments across all puzzles in a directory."""
-    # TODO: Implement experiment runner
-    #   1. Import experiments.runner
-    #   2. Call runner.run_all(puzzle_dir)
-    #   3. Print results table
-    print(f"[Experiments] Scanning puzzles in: {puzzle_dir}")
-    raise NotImplementedError("TODO: Implement experiment runner invocation")
+    from config import MAX_SOLVER_TIMEOUT_SECONDS, PROJECT_ROOT, RESULTS_DIR
+    from experiments.runner import ExperimentRunner
+
+    target = Path(puzzle_dir)
+    if not target.exists():
+        candidate = PROJECT_ROOT / puzzle_dir
+        if candidate.exists():
+            target = candidate
+
+    print(f"[Experiments] Scanning puzzles in: {target}")
+    runner = ExperimentRunner(timeout_sec=float(MAX_SOLVER_TIMEOUT_SECONDS))
+    results = runner.run_all(target)
+    runner.print_table(results)
+
+    csv_path = runner.export_csv(results, RESULTS_DIR / "summary.csv")
+    print(f"\n[Experiments] Results exported to: {csv_path}")
 
 
 def main() -> None:

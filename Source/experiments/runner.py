@@ -21,11 +21,35 @@ import json
 import time
 from dataclasses import asdict, dataclass
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Sequence, Tuple
 
+from tabulate import tabulate
+
+from agent.entailment import EntailmentChecker
 from agent.logic_agent import LogicAgent
+from agent.trace import DeductionTrace, TraceStep
 from engine.game_engine import GameEngine
 from engine.puzzle_loader import load_puzzle
+from engine.verdict import Verdict
+from logic.knowledge_base import KnowledgeBase
+from logic.variable_map import VariableMap
+from solver.dpll import DPLL
+
+CSV_FIELDNAMES = [
+    "puzzle_name",
+    "grid_size",
+    "primary_vars",
+    "aux_vars",
+    "total_clauses",
+    "sat_calls",
+    "decisions",
+    "propagations",
+    "backtracks",
+    "deduction_steps",
+    "runtime_sec",
+    "solved",
+    "status_message",
+]
 
 
 @dataclass
@@ -70,13 +94,139 @@ class ExperimentResult:
 class ExperimentRunner:
     """Manages puzzle batch testing and reporting."""
 
-    def __init__(self, timeout_sec: float = 60.0) -> None:
+    def __init__(
+        self,
+        timeout_sec: float = 60.0,
+        heuristic: str = "mom",
+        use_pure_literal: bool = False,
+    ) -> None:
         """Initialise the experiment runner.
 
         Args:
             timeout_sec: Timeout threshold per puzzle in seconds.
+            heuristic: DPLL variable selection heuristic (``'mom'`` or ``'smallest'``).
+            use_pure_literal: Whether to enable pure literal elimination in DPLL.
         """
+        if timeout_sec <= 0:
+            raise ValueError(f"timeout_sec must be positive, got {timeout_sec!r}")
         self.timeout_sec = timeout_sec
+        self.heuristic = heuristic
+        self.use_pure_literal = use_pure_literal
+
+    @staticmethod
+    def _format_puzzle_label(path: Path) -> str:
+        """Return a readable, unambiguous label such as ``'3x3/puzzle_01.json'``."""
+        parent = path.parent.name
+        if parent and parent not in (".", "puzzles"):
+            return f"{parent}/{path.name}"
+        return path.name
+
+    def _solve_with_fallback(
+        self,
+        engine: GameEngine,
+        solver: DPLL,
+        deadline: float,
+    ) -> Tuple[DeductionTrace, KnowledgeBase, str]:
+        """Firewall-safe no-guess deduction loop used when ``LogicAgent.solve()``
+        is not yet implemented.
+
+        Uses strictly public information from *engine* (revealed clues and
+        proven verdicts), Person 2's :class:`KnowledgeBase`, Person 4's
+        :class:`EntailmentChecker`, and Person 3's :class:`DPLL`.
+        """
+        vmap = VariableMap()
+        vmap.register_all(
+            [
+                {"name": cell.character_name, "cell": cell.cell_id}
+                for cell in engine.puzzle.grid.get_all_cells()
+            ]
+        )
+        kb = KnowledgeBase(grid=engine.puzzle.grid, variable_map=vmap)
+
+        # Populate KB with strictly public initial state
+        active_clue_ids: List[str] = []
+        for cid, clue in engine.get_revealed_clues():
+            kb.add_clue(clue)
+            active_clue_ids.append(cid)
+        for cid, verdict in sorted(engine.verdicts.items()):
+            if verdict == Verdict.CRIMINAL:
+                kb.add_verdict(cid, True)
+            elif verdict == Verdict.INNOCENT:
+                kb.add_verdict(cid, False)
+
+        checker = EntailmentChecker(solver)
+        trace = DeductionTrace()
+        step_num = 0
+        status_message = "SUCCESS"
+
+        while not engine.is_solved():
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"Experiment exceeded timeout of {self.timeout_sec:.1f}s"
+                )
+            solver.timeout_seconds = remaining
+
+            unresolved = engine.get_unresolved_cells()
+            if not unresolved:
+                break
+
+            sat_before_step = solver.stats.sat_calls
+            progressed = False
+
+            for cid in unresolved:
+                remaining = deadline - time.perf_counter()
+                if remaining <= 0:
+                    raise TimeoutError(
+                        f"Experiment exceeded timeout of {self.timeout_sec:.1f}s"
+                    )
+                solver.timeout_seconds = remaining
+
+                entailed = checker.check_cell(kb, cid)
+                if entailed == Verdict.INCONSISTENT:
+                    status_message = f"INCONSISTENT (contradiction at {cid})"
+                    return trace, kb, status_message
+
+                if entailed in (Verdict.CRIMINAL, Verdict.INNOCENT):
+                    outcome = engine.submit_verdict(cid, entailed)
+                    if outcome != Verdict.ACCEPTED:
+                        status_message = (
+                            f"REJECTED ({cid} {entailed.name}: {outcome.name})"
+                        )
+                        return trace, kb, status_message
+
+                    # Incorporate newly proven verdict and revealed clue into KB
+                    kb.add_verdict(cid, entailed == Verdict.CRIMINAL)
+                    cell = engine.puzzle.grid.get_cell_by_id(cid)
+                    revealed_desc: Optional[str] = None
+                    if cell is not None and cell.is_revealed and cell.clue is not None:
+                        kb.add_clue(cell.clue)
+                        revealed_desc = cell.clue.description
+                        active_clue_ids.append(cid)
+
+                    step_num += 1
+                    trace.add_step(
+                        TraceStep(
+                            step_number=step_num,
+                            cell_id=cid,
+                            character_name=cell.character_name if cell else cid,
+                            verdict=entailed,
+                            active_clue_ids=list(active_clue_ids),
+                            sat_queries_count=solver.stats.sat_calls - sat_before_step,
+                            newly_revealed_clue=revealed_desc,
+                        )
+                    )
+                    progressed = True
+                    break
+
+            if not progressed:
+                remaining_ids = ", ".join(engine.get_unresolved_cells())
+                status_message = f"DEADLOCK (unforced: {remaining_ids})"
+                break
+
+        if engine.is_solved():
+            status_message = "SUCCESS"
+        return trace, kb, status_message
 
     def run_puzzle(self, puzzle_path: str | Path) -> ExperimentResult:
         """Execute the solver on a single puzzle file and record all metrics.
@@ -87,16 +237,73 @@ class ExperimentRunner:
         Returns:
             The recorded :class:`ExperimentResult`.
         """
-        # TODO: Implement single puzzle experiment execution:
-        #   1. puzzle = load_puzzle(puzzle_path)
-        #   2. engine = GameEngine(puzzle)
-        #   3. agent = LogicAgent()
-        #   4. Start timer
-        #   5. trace = agent.solve(engine)
-        #   6. Stop timer
-        #   7. Collect metrics from solver.stats and trace
-        #   8. Return ExperimentResult
-        raise NotImplementedError("TODO: Implement ExperimentRunner.run_puzzle()")
+        path = Path(puzzle_path)
+        puzzle_label = self._format_puzzle_label(path)
+
+        try:
+            puzzle = load_puzzle(path)
+        except Exception as exc:
+            return ExperimentResult(
+                puzzle_name=puzzle_label,
+                grid_size=0,
+                solved=False,
+                status_message=f"LOAD_ERROR: {exc}",
+            )
+
+        grid_size = puzzle.grid.size
+        primary_vars = grid_size * grid_size
+        solver = DPLL(
+            heuristic=self.heuristic,
+            use_pure_literal=self.use_pure_literal,
+            timeout_seconds=self.timeout_sec,
+        )
+        engine = GameEngine(puzzle)
+        agent = LogicAgent(solver=solver)
+
+        start_time = time.perf_counter()
+        deadline = start_time + self.timeout_sec
+        trace: Optional[DeductionTrace] = None
+        kb: Optional[KnowledgeBase] = None
+        status_message = "SUCCESS"
+
+        try:
+            try:
+                trace = agent.solve(engine)
+                if engine.is_solved():
+                    status_message = "SUCCESS"
+                else:
+                    remaining_ids = ", ".join(engine.get_unresolved_cells())
+                    status_message = f"DEADLOCK (unforced: {remaining_ids})"
+            except NotImplementedError:
+                trace, kb, status_message = self._solve_with_fallback(
+                    engine, solver, deadline
+                )
+        except TimeoutError:
+            status_message = f"TIMEOUT (>{self.timeout_sec:.1f}s)"
+        except Exception as exc:
+            status_message = f"ERROR: {exc}"
+
+        elapsed = time.perf_counter() - start_time
+
+        # Collect KB clause and auxiliary variable counts from public KB
+        final_kb = kb if kb is not None else engine.build_public_kb()
+        kb_stats = final_kb.get_stats()
+
+        return ExperimentResult(
+            puzzle_name=puzzle_label,
+            grid_size=grid_size,
+            primary_vars=primary_vars,
+            aux_vars=kb_stats["num_aux_vars"],
+            total_clauses=kb_stats["num_clauses"],
+            sat_calls=solver.stats.sat_calls,
+            decisions=solver.stats.decisions,
+            propagations=solver.stats.propagations,
+            backtracks=solver.stats.backtracks,
+            deduction_steps=len(trace.steps) if trace is not None else 0,
+            runtime_sec=round(elapsed, 6),
+            solved=engine.is_solved(),
+            status_message=status_message,
+        )
 
     def run_all(self, directory: str | Path) -> List[ExperimentResult]:
         """Discover and execute all puzzle JSON files in *directory* and subdirectories.
@@ -106,25 +313,175 @@ class ExperimentRunner:
 
         Returns:
             List of results for each puzzle.
-        """
-        # TODO: Implement directory traversal and batch benchmarking
-        raise NotImplementedError("TODO: Implement ExperimentRunner.run_all()")
 
-    def export_csv(self, results: List[ExperimentResult], out_path: str | Path) -> None:
+        Raises:
+            FileNotFoundError: If *directory* does not exist.
+        """
+        root = Path(directory)
+        if not root.exists():
+            raise FileNotFoundError(f"Puzzle directory not found: {root}")
+
+        if root.is_file():
+            return [self.run_puzzle(root)]
+
+        json_files = sorted(
+            root.rglob("*.json"),
+            key=lambda p: str(p.relative_to(root)).replace("\\", "/"),
+        )
+        return [self.run_puzzle(p) for p in json_files]
+
+    def export_csv(
+        self, results: Sequence[ExperimentResult], out_path: str | Path
+    ) -> Path:
         """Export benchmark results to a CSV file.
 
         Args:
-            results: List of experiment results.
+            results: Sequence of experiment results.
             out_path: Destination CSV file path.
-        """
-        # TODO: Implement CSV export with headers matching Section 4.5 requirements
-        raise NotImplementedError("TODO: Implement ExperimentRunner.export_csv()")
 
-    def print_table(self, results: List[ExperimentResult]) -> None:
+        Returns:
+            Resolved :class:`Path` of the written CSV file.
+        """
+        destination = Path(out_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        with destination.open("w", encoding="utf-8", newline="") as fh:
+            writer = csv.DictWriter(fh, fieldnames=CSV_FIELDNAMES)
+            writer.writeheader()
+            for res in results:
+                writer.writerow(res.to_dict())
+
+        return destination
+
+    def export_json(
+        self, results: Sequence[ExperimentResult], out_path: str | Path
+    ) -> Path:
+        """Export benchmark results to a formatted JSON file."""
+        destination = Path(out_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        payload = [res.to_dict() for res in results]
+        with destination.open("w", encoding="utf-8") as fh:
+            json.dump(payload, fh, indent=2)
+        return destination
+
+    def export_latex(
+        self, results: Sequence[ExperimentResult], out_path: str | Path
+    ) -> Path:
+        """Export benchmark results as a LaTeX tabular snippet for reports."""
+        destination = Path(out_path)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+
+        headers = [
+            "Puzzle",
+            "Grid",
+            "Prim.",
+            "Aux.",
+            "Clauses",
+            "SAT Calls",
+            "Decisions",
+            "Props.",
+            "Backtracks",
+            "Steps",
+            "Time (s)",
+            "Solved",
+        ]
+        rows = [
+            [
+                res.puzzle_name,
+                f"{res.grid_size}x{res.grid_size}",
+                res.primary_vars,
+                res.aux_vars,
+                res.total_clauses,
+                res.sat_calls,
+                res.decisions,
+                res.propagations,
+                res.backtracks,
+                res.deduction_steps,
+                f"{res.runtime_sec:.6f}",
+                "Yes" if res.solved else "No",
+            ]
+            for res in results
+        ]
+        latex_str = tabulate(rows, headers=headers, tablefmt="latex_booktabs")
+        destination.write_text(latex_str + "\n", encoding="utf-8")
+        return destination
+
+    def format_table(self, results: Sequence[ExperimentResult]) -> str:
+        """Format experiment results as an ASCII table with a summary footer."""
+        if not results:
+            return "No experiment results to display."
+
+        headers = [
+            "Puzzle",
+            "Grid",
+            "Primary",
+            "Aux",
+            "Clauses",
+            "SAT Calls",
+            "Decisions",
+            "Propagations",
+            "Backtracks",
+            "Steps",
+            "Runtime (s)",
+            "Status",
+        ]
+        rows = [
+            [
+                res.puzzle_name,
+                f"{res.grid_size}x{res.grid_size}" if res.grid_size > 0 else "-",
+                res.primary_vars,
+                res.aux_vars,
+                res.total_clauses,
+                res.sat_calls,
+                res.decisions,
+                res.propagations,
+                res.backtracks,
+                res.deduction_steps,
+                f"{res.runtime_sec:.6f}",
+                "SOLVED" if res.solved else res.status_message,
+            ]
+            for res in results
+        ]
+
+        table = tabulate(rows, headers=headers, tablefmt="grid")
+        solved_count = sum(1 for r in results if r.solved)
+        total_sat = sum(r.sat_calls for r in results)
+        total_dec = sum(r.decisions for r in results)
+        total_prop = sum(r.propagations for r in results)
+        total_bt = sum(r.backtracks for r in results)
+        total_time = sum(r.runtime_sec for r in results)
+
+        summary = (
+            f"\nSummary ({self.heuristic.upper()}): "
+            f"{solved_count}/{len(results)} solved | "
+            f"SAT Calls: {total_sat} | "
+            f"Decisions: {total_dec} | "
+            f"Propagations: {total_prop} | "
+            f"Backtracks: {total_bt} | "
+            f"Total Runtime: {total_time:.6f}s"
+        )
+        return table + summary
+
+    def print_table(self, results: Sequence[ExperimentResult]) -> None:
         """Print a nicely formatted ASCII table summarizing experiment results.
 
         Args:
-            results: List of experiment results.
+            results: Sequence of experiment results.
         """
-        # TODO: Implement formatted console table (using tabulate or custom formatting)
-        raise NotImplementedError("TODO: Implement ExperimentRunner.print_table()")
+        print(self.format_table(results))
+
+    def compare_heuristics(
+        self,
+        directory: str | Path,
+        heuristics: Tuple[str, ...] = ("mom", "smallest"),
+    ) -> Dict[str, List[ExperimentResult]]:
+        """Run the benchmark suite across multiple DPLL variable-selection heuristics."""
+        comparison: Dict[str, List[ExperimentResult]] = {}
+        for heuristic in heuristics:
+            runner = ExperimentRunner(
+                timeout_sec=self.timeout_sec,
+                heuristic=heuristic,
+                use_pure_literal=self.use_pure_literal,
+            )
+            comparison[heuristic] = runner.run_all(directory)
+        return comparison
