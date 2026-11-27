@@ -236,13 +236,15 @@ class TestGameEngine(unittest.TestCase):
         """Unproven verdict returns NOT_PROVABLE; wrong verdict returns CONTRADICTED; neither flips card."""
         engine = GameEngine(self.puzzle_01)
 
-        # A2 is truly CRIMINAL in solution, but NOT provable from initial clues (A1, C3)
-        res_guess = engine.submit_verdict("A2", Verdict.CRIMINAL)
-        self.assertEqual(res_guess, Verdict.NOT_PROVABLE)
+        # A2 is NOT provable from initial clues (A1, C3) -> BOTH guesses must return NOT_PROVABLE (no leak!)
+        res_guess_crim = engine.submit_verdict("A2", Verdict.CRIMINAL)
+        self.assertEqual(res_guess_crim, Verdict.NOT_PROVABLE)
+        res_guess_inno = engine.submit_verdict("A2", Verdict.INNOCENT)
+        self.assertEqual(res_guess_inno, Verdict.NOT_PROVABLE)
         self.assertNotIn("A2", engine.revealed_cells)
         self.assertNotIn("A2", engine.verdicts)
 
-        # B3 is truly CRIMINAL, so calling it INNOCENT contradicts the solution
+        # B3 is forced CRIMINAL by C3's revealed clue, so calling it INNOCENT is CONTRADICTED
         res_wrong = engine.submit_verdict("B3", Verdict.INNOCENT)
         self.assertEqual(res_wrong, Verdict.CONTRADICTED)
         self.assertNotIn("B3", engine.revealed_cells)

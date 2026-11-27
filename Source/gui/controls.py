@@ -131,12 +131,6 @@ class GameController:
             refs = ClueHighlighter.get_referenced_cells(clue, engine.puzzle.grid)
             if target_cell_id in refs:
                 return clue_cell_id, clue.description, refs | {target_cell_id}
-        # Fallback to first revealed clue if deduction is indirect across multiple clues
-        revealed = engine.get_revealed_clues()
-        if revealed:
-            clue_cell_id, clue = revealed[0]
-            refs = ClueHighlighter.get_referenced_cells(clue, engine.puzzle.grid)
-            return clue_cell_id, clue.description, refs | {target_cell_id}
         return None, None, {target_cell_id}
 
     def _find_first_forced_cell(

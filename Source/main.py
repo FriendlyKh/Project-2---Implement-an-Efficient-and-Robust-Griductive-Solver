@@ -51,11 +51,11 @@ except ImportError:  # pragma: no cover - graceful fallback without colorama
 
     Fore = Style = _NoColor()  # type: ignore[assignment]
 
-from tabulate import tabulate
+from typing import TYPE_CHECKING
 
-from agent.entailment import EntailmentChecker
-from agent.hint import HintProvider
-from agent.logic_agent import LogicAgent
+if TYPE_CHECKING:
+    from agent.logic_agent import LogicAgent
+
 from config import (
     FLASK_DEBUG,
     FLASK_HOST,
@@ -68,7 +68,6 @@ from config import (
 from engine.game_engine import GameEngine
 from engine.puzzle_loader import load_puzzle
 from engine.verdict import Verdict
-from gui.clue_highlight import ClueHighlighter
 from solver.dpll import DPLL
 
 
@@ -240,6 +239,8 @@ def _print_public_board(
             row_cells.append(_format_cell_cli(cell_dict, highlighted=(cid in highlights)))
         table_rows.append(row_cells)
 
+    from tabulate import tabulate
+
     print(tabulate(table_rows, headers=headers, tablefmt="grid"))
 
     revealed_clues = [
@@ -267,6 +268,8 @@ def _print_public_board(
 
 def _run_auto_solve(puzzle_path: str) -> None:
     """Load a puzzle and run the deductive LogicAgent to auto-solve it."""
+    from agent.logic_agent import LogicAgent
+
     resolved = _resolve_puzzle_path(puzzle_path)
     label = _format_puzzle_name(resolved)
     print(f"[Auto-Solve] Loading puzzle from: {resolved}")
@@ -295,6 +298,7 @@ def _run_auto_solve(puzzle_path: str) -> None:
 
     kb_stats = engine.build_public_kb().get_stats()
     stats = solver.stats
+    is_unique = agent.check_uniqueness(puzzle)
     print(f"\n{Fore.CYAN}{Style.BRIGHT}=== Solver & Knowledge Base Summary ==={Style.RESET_ALL}")
     print(
         f"  Primary Vars : {puzzle.grid.size * puzzle.grid.size} | "
@@ -309,11 +313,16 @@ def _run_auto_solve(puzzle_path: str) -> None:
         f"Conflicts: {stats.conflicts}"
     )
     print(f"  Total Time   : {elapsed:.6f}s (DPLL time: {stats.runtime_seconds:.6f}s)")
+    print(f"  Unique Sol.  : {'YES' if is_unique else 'NO (multiple models / UNSAT)'}")
 
     if engine.is_solved():
         print(
             f"\n{Fore.GREEN}{Style.BRIGHT}[SUCCESS] Puzzle solved completely in "
             f"{len(trace.steps)} deductive step(s) with zero guessing!{Style.RESET_ALL}"
+        )
+    elif agent.terminal_state == "INCONSISTENT":
+        print(
+            f"\n{Fore.RED}{Style.BRIGHT}[INCONSISTENT] Knowledge base contradiction detected.{Style.RESET_ALL}"
         )
     else:
         unresolved = ", ".join(engine.get_unresolved_cells())
@@ -331,8 +340,12 @@ def _run_gui(puzzle_path: Optional[str] = None) -> None:
 
     if puzzle_path:
         resolved = _resolve_puzzle_path(puzzle_path)
+        try:
+            ctrl_path = str(resolved.relative_to(PROJECT_ROOT.resolve())).replace("\\", "/")
+        except ValueError:
+            ctrl_path = str(resolved)
         ctrl = GameController()
-        ctrl.load_puzzle(str(resolved))
+        ctrl.load_puzzle(ctrl_path)
         app = create_app(ctrl)
         print(
             f"\n[GUI] Pre-loaded puzzle: {_format_puzzle_name(resolved)}\n"
@@ -395,6 +408,11 @@ def _parse_cli_verdict(raw: str) -> Optional[Verdict]:
 
 def _run_cli_menu(initial_puzzle_path: Optional[str] = None) -> None:
     """Interactive command-line menu loop."""
+    from agent.entailment import EntailmentChecker
+    from agent.hint import HintProvider
+    from agent.logic_agent import LogicAgent
+    from gui.clue_highlight import ClueHighlighter
+
     engine: Optional[GameEngine] = None
     current_path: Optional[Path] = None
     current_label: Optional[str] = None
@@ -602,7 +620,7 @@ def _run_cli_menu(initial_puzzle_path: Optional[str] = None) -> None:
             if hint is None:
                 print(
                     f"{Fore.YELLOW}[Hint] No unresolved character is currently forced "
-                    "from revealed clues (deadlock / ambiguous state).{Style.RESET_ALL}"
+                    f"from revealed clues (deadlock / ambiguous state).{Style.RESET_ALL}"
                 )
             else:
                 target_cid, forced_verdict, clue_desc = hint
@@ -647,7 +665,7 @@ def _run_cli_menu(initial_puzzle_path: Optional[str] = None) -> None:
             if step is None:
                 print(
                     f"{Fore.YELLOW}[Deadlock] No unresolved character can be deduced "
-                    "without guessing.{Style.RESET_ALL}"
+                    f"without guessing.{Style.RESET_ALL}"
                 )
             else:
                 cli_agent.trace.add_step(step)
@@ -744,7 +762,7 @@ def main() -> None:
             _run_cli_menu(initial_puzzle_path=args.puzzle)
         else:
             _run_cli_menu()
-    except (FileNotFoundError, ValueError) as exc:
+    except (FileNotFoundError, ValueError, TimeoutError, RuntimeError) as exc:
         print(f"{Fore.RED}[Error] {exc}{Style.RESET_ALL}", file=sys.stderr)
         sys.exit(1)
     except KeyboardInterrupt:

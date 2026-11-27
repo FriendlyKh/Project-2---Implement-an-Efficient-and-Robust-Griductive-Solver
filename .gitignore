@@ -76,3 +76,6 @@ Source/experiments/results/*.txt
 graphify-out/
 .agents/
 .gitattributes
+
+# Project file
+AI - Project 2.pdf

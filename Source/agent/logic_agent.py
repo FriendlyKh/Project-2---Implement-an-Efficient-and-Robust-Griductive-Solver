@@ -46,6 +46,21 @@ class LogicAgent:
         self.solver = solver or DPLL()
         self.entailment = EntailmentChecker(self.solver)
         self.trace = DeductionTrace()
+        self.terminal_state: Optional[str] = None
+
+    def classify_unresolved(
+        self, engine: GameEngine, kb: Optional[KnowledgeBase] = None
+    ) -> Dict[str, Verdict]:
+        """Classify every unresolved character as CRIMINAL, INNOCENT, UNKNOWN, or INCONSISTENT."""
+        active_kb = kb if kb is not None else engine.build_public_kb()
+        classifications: Dict[str, Verdict] = {}
+        for cell_id in engine.get_public_state()["unresolved_cells"]:
+            verdict = self.entailment.check_cell(active_kb, cell_id)
+            classifications[cell_id] = verdict
+            if verdict == Verdict.INCONSISTENT:
+                self.terminal_state = "INCONSISTENT"
+                break
+        return classifications
 
     def solve(self, engine: GameEngine) -> DeductionTrace:
         """Execute the deduction loop to solve the puzzle held by *engine*.
@@ -62,7 +77,7 @@ class LogicAgent:
                  - add newly revealed clue and unit clause to KB
                  - record step in trace
             c. If no unresolved cell is forced:
-                 - Puzzle cannot be solved without guessing (deadlock / UNKNOWN).
+                 - Puzzle cannot be solved without guessing (deadlock / UNKNOWN or INCONSISTENT).
                  - Break loop.
             d. If all cells are resolved:
                  - Puzzle solved successfully!
@@ -75,23 +90,26 @@ class LogicAgent:
         Returns:
             The completed :class:`~agent.trace.DeductionTrace`.
         """
-        # TODO: Implement the deduction loop:
-        #   kb = KnowledgeBase(variable_map=..., encoder=...)
-        #   while not engine.is_solved():
-        #       ...
+        self.trace = DeductionTrace()
+        self.terminal_state = None
         kb = engine.build_public_kb()
 
         while not engine.is_solved():
             step = self.step(engine, kb)
 
-            #no unresolved cell is forced
+            # No unresolved cell is forced (deadlock or inconsistent KB)
             if step is None:
                 break
 
             self.trace.add_step(step)
 
+        if engine.is_solved():
+            self.terminal_state = "SOLVED"
+        elif self.terminal_state != "INCONSISTENT":
+            self.terminal_state = "UNKNOWN"
+
         return self.trace
-    
+
     def step(self, engine: GameEngine, kb: KnowledgeBase) -> Optional[TraceStep]:
         """Perform a single step of deduction.
 
@@ -104,23 +122,24 @@ class LogicAgent:
 
         Returns:
             The :class:`~agent.trace.TraceStep` if a deduction was made,
-            or ``None`` if no character could be forced.
+            or ``None`` if no character could be forced (or KB is inconsistent).
         """
-        # TODO: Implement single-step deduction
-        unresolved_cells = engine.get_public_state()['unresolved_cells']
-        queries_before = self.solver.stats.sat_calls 
+        public_state = engine.get_public_state()
+        unresolved_cells = public_state["unresolved_cells"]
+        names_by_id = {c["id"]: c["name"] for c in public_state["cells"]}
+        queries_before = self.solver.stats.sat_calls
 
         for cell_id in unresolved_cells:
             verdict = self.entailment.check_cell(kb, cell_id)
 
+            if verdict == Verdict.INCONSISTENT:
+                self.terminal_state = "INCONSISTENT"
+                return None
 
             if verdict not in (Verdict.INNOCENT, Verdict.CRIMINAL):
                 continue
 
-            active = [
-                f"{cid}: {clue.description or clue.clue_type}"
-                for cid, clue in engine.get_revealed_clues()
-            ]
+            active = [cid for cid, _ in engine.get_revealed_clues()]
             result = engine.submit_verdict(cell_id, verdict)
 
             if result != Verdict.ACCEPTED:
@@ -133,25 +152,24 @@ class LogicAgent:
             if clue is not None:
                 kb.add_clue(clue)
 
-            kb.add_verdict(cell_id, verdict == verdict.CRIMINAL)
-
-            cell = kb.grid.get_cell_by_id(cell_id)
+            kb.add_verdict(cell_id, verdict == Verdict.CRIMINAL)
 
             return TraceStep(
                 step_number=len(self.trace.steps) + 1,
                 cell_id=cell_id,
-                character_name= cell.character_name if cell else 'NotFound',
+                character_name=names_by_id.get(cell_id, "NotFound"),
                 verdict=verdict,
                 active_clue_ids=active,
                 sat_queries_count=self.solver.stats.sat_calls - queries_before,
                 newly_revealed_clue=clue.description if clue is not None else None,
                 notes=None,
             )
-        #no unresolved cell is forced
+        # No unresolved cell is forced
         return None
-              
 
-    def check_uniqueness(self, puzzle: Puzzle) -> bool:
+    def check_uniqueness(
+        self, puzzle: Puzzle, include_initial_revealed: bool = False
+    ) -> bool:
         """Verify whether the complete set of all clues guarantees a UNIQUE solution.
 
         According to Section 4.4:
@@ -168,11 +186,12 @@ class LogicAgent:
 
         Args:
             puzzle: The puzzle to evaluate with all hidden clues revealed.
+            include_initial_revealed: If ``True``, also include unit clauses for
+                ``puzzle.initially_revealed``.
 
         Returns:
             ``True`` if exactly one solution exists, ``False`` otherwise.
         """
-        # TODO: Implement uniqueness check via blocking clause technique
         grid = puzzle.grid
         cells = grid.get_all_cells()
 
@@ -184,13 +203,19 @@ class LogicAgent:
         for cell in cells:
             if cell.clue is not None:
                 clauses.extend(encoder.encode_clue(cell.clue))
+
+        if include_initial_revealed:
+            for cid in puzzle.initially_revealed:
+                var = vmap.get_var(cid)
+                clauses.append([var] if puzzle.solution[cid] else [-var])
+
         num_vars = encoder.total_vars          # gồm cả biến phụ
 
         solver = DPLL()
 
         sat, model = solver.solve(clauses, num_vars)
-        if not sat:
-            return False          
+        if not sat or model is None:
+            return False
 
         cell_vars = [vmap.get_var(c.cell_id) for c in cells]
         blocking = [-v if model.get(v, False) else v for v in cell_vars]

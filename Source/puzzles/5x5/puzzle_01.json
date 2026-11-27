@@ -2,15 +2,15 @@
   "size": 5,
   "characters": [
     {"cell": "A1", "name": "Alan", "profession": "Captain", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 1}, "description": "Exactly 1 criminal in row 1."}},
-    {"cell": "B1", "name": "Beth", "profession": "Doctor", "status": "CRIMINAL", "clue": {"type": "SAME", "cell_a": "B1", "cell_b": "C2", "region": {"type": "cells", "value": ["B1", "C2"]}, "description": "Beth and Cole same status."}},
+    {"cell": "B1", "name": "Beth", "profession": "Doctor", "status": "CRIMINAL", "clue": {"type": "SAME", "cell_a": "B1", "cell_b": "C2", "region": {"type": "cells", "value": ["B1", "C2"]}, "description": "Beth and Hank same status."}},
     {"cell": "C1", "name": "Carl", "profession": "Guard", "status": "INNOCENT", "clue": {"type": "AT_MOST", "k": 2, "region": {"type": "column", "value": "C"}, "description": "At most 2 criminals in column C."}},
     {"cell": "D1", "name": "Dana", "profession": "Lawyer", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 0, "region": {"type": "column", "value": "D"}, "description": "No criminals in col D."}},
     {"cell": "E1", "name": "Evan", "profession": "Judge", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "E1", "cell_b": "A1", "region": {"type": "cells", "value": ["E1", "A1"]}, "description": "Evan and Alan same status."}},
 
     {"cell": "A2", "name": "Faye", "profession": "Nurse", "status": "INNOCENT", "clue": {"type": "DIFFERENT", "cell_a": "A2", "cell_b": "B1", "region": {"type": "cells", "value": ["A2", "B1"]}, "description": "Faye and Beth different status."}},
     {"cell": "B2", "name": "Gabe", "profession": "Clerk", "status": "INNOCENT", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 2}, "description": "Exactly 1 criminal in row 2."}},
-    {"cell": "C2", "name": "Cole", "profession": "Baker", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 2}, "description": "Exactly 1 criminal in row 2."}},
-    {"cell": "D2", "name": "Hope", "profession": "Pilot", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "C2", "is_criminal": true, "region": {"type": "cells", "value": ["C2"]}, "description": "Cole in C2 is Criminal."}},
+    {"cell": "C2", "name": "Hank", "profession": "Baker", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 1, "region": {"type": "row", "value": 2}, "description": "Exactly 1 criminal in row 2."}},
+    {"cell": "D2", "name": "Hope", "profession": "Pilot", "status": "INNOCENT", "clue": {"type": "FACT", "target_cell": "C2", "is_criminal": true, "region": {"type": "cells", "value": ["C2"]}, "description": "Hank in C2 is Criminal."}},
     {"cell": "E2", "name": "Ivan", "profession": "Driver", "status": "INNOCENT", "clue": {"type": "SAME", "cell_a": "E2", "cell_b": "D2", "region": {"type": "cells", "value": ["E2", "D2"]}, "description": "Ivan and Hope same status."}},
 
     {"cell": "A3", "name": "Jill", "profession": "Artist", "status": "CRIMINAL", "clue": {"type": "EXACTLY", "k": 2, "region": {"type": "row", "value": 3}, "description": "Exactly 2 criminals in row 3."}},

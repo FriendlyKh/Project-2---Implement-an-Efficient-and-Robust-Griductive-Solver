@@ -25,11 +25,11 @@ class Verdict(Enum):
             Neither CRIMINAL nor INNOCENT can be proven from the current
             knowledge base — more clues are needed.
         NOT_PROVABLE:
-            The submitted verdict is correct w.r.t. the hidden solution
-            but was **not** logically entailed by the current KB.
-            (The player guessed right — but guessing is not allowed.)
+            Neither verdict is currently logically forced by the public KB
+            (guessing is not allowed).
         CONTRADICTED:
-            The submitted verdict contradicts the hidden solution.
+            The opposite verdict is currently logically forced by the public KB
+            (or the submission contradicts the hidden solution).
         INCONSISTENT:
             The knowledge base itself is inconsistent (both KB ∧ C_i and
             KB ∧ ¬C_i are UNSAT).  This should never happen in a valid

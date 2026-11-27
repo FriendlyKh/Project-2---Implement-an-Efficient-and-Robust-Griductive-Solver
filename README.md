@@ -18,7 +18,7 @@ Inspired by Nicky Case’s [*The Evolution of Trust*](https://ncase.me/trust/), 
 - **Proof-by-Refutation Entailment**: $\text{KB}_t \models C_i \iff \text{KB}_t \land \neg C_i \text{ is UNSAT}$
 - Autonomous deduction loops & firewall architecture
 
-👉 **Launch Explainer:** Open [`docs/explainer.html`](file:///home/nguyen-dinh-ngoc-khoa/PycharmProjects/Project-2---Implement-an-Efficient-and-Robust-Griductive-Solver/docs/explainer.html) in any browser:
+👉 **Launch Explainer:** Open [`docs/explainer.html`](docs/explainer.html) in any browser:
 ```bash
 xdg-open docs/explainer.html    # Linux
 # or open docs/explainer.html   # macOS
@@ -30,9 +30,9 @@ xdg-open docs/explainer.html    # Linux
 
 | Document | Purpose |
 |---|---|
-| [**`TASK_DISTRIBUTION.md`**](file:///home/nguyen-dinh-ngoc-khoa/PycharmProjects/Project-2---Implement-an-Efficient-and-Robust-Griductive-Solver/TASK_DISTRIBUTION.md) | **4-person task breakdown**, acceptance criteria, contribution matrix, and rubric points |
-| [**`PIPELINE.md`**](file:///home/nguyen-dinh-ngoc-khoa/PycharmProjects/Project-2---Implement-an-Efficient-and-Robust-Griductive-Solver/PIPELINE.md) | **Deduction pipeline & CI/CD workflow**, Mermaid architecture diagrams, and entailment math |
-| [**`Source/README.md`**](file:///home/nguyen-dinh-ngoc-khoa/PycharmProjects/Project-2---Implement-an-Efficient-and-Robust-Griductive-Solver/Source/README.md) | Developer guide, code structure, puzzle JSON schema, and execution commands |
+| [**`TASK_DISTRIBUTION.md`**](TASK_DISTRIBUTION.md) | **4-person task breakdown**, acceptance criteria, contribution matrix, and rubric points |
+| [**`PIPELINE.md`**](PIPELINE.md) | **Deduction pipeline & CI/CD workflow**, Mermaid architecture diagrams, and entailment math |
+| [**`Source/README.md`**](Source/README.md) | Developer guide, code structure, puzzle JSON schema, and execution commands |
 
 ---
 

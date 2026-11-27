@@ -266,11 +266,32 @@ class ExperimentRunner:
         kb: Optional[KnowledgeBase] = None
         status_message = "SUCCESS"
 
+        orig_solve = solver.solve
+
+        def _bounded_solve(clauses, num_vars, assumptions=None, timeout_seconds=None):
+            remaining = deadline - time.perf_counter()
+            if remaining <= 0:
+                raise TimeoutError(
+                    f"Experiment exceeded timeout of {self.timeout_sec:.1f}s"
+                )
+            effective = (
+                min(remaining, timeout_seconds)
+                if timeout_seconds is not None
+                else remaining
+            )
+            return orig_solve(
+                clauses, num_vars, assumptions=assumptions, timeout_seconds=effective
+            )
+
+        solver.solve = _bounded_solve  # type: ignore[method-assign]
+
         try:
             try:
                 trace = agent.solve(engine)
                 if engine.is_solved():
                     status_message = "SUCCESS"
+                elif getattr(agent, "terminal_state", None) == "INCONSISTENT":
+                    status_message = "INCONSISTENT"
                 else:
                     remaining_ids = ", ".join(engine.get_unresolved_cells())
                     status_message = f"DEADLOCK (unforced: {remaining_ids})"
